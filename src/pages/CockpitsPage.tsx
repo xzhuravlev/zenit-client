@@ -12,6 +12,24 @@ type OrderBy = "new" | "old" | "popular";
 
 interface CockpitMedia {
   link: string;
+  type: string;
+}
+
+interface ChecklistItem {
+  id: string;
+  description: string;
+  order: number;
+}
+
+interface Checklist {
+  id: string;
+  name: string;
+  items: ChecklistItem[];
+}
+
+interface CockpitDetail extends Cockpit {
+  checklists: Checklist[];
+  creator: { id: string; name: string | null; surname: string | null; avatar: string | null } | null;
 }
 
 interface Cockpit {
@@ -84,77 +102,93 @@ interface CardProps {
   cockpit: Cockpit;
   onToggleFav: () => void;
   favLoading: boolean;
+  onPreview: () => void;
 }
 
-const CockpitCard: React.FC<CardProps> = ({ cockpit, onToggleFav, favLoading }) => {
-  const navigate = useNavigate();
+const CockpitCard: React.FC<CardProps> = ({ cockpit, onToggleFav, favLoading, onPreview }) => {
   const tags = getCockpitTags(cockpit);
-  const previewUrl = cockpit.media[0]?.link;
+  const preview = cockpit.media[0]?.link;
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const days = Math.floor(diff / 86400000);
+    if (days < 1) return "today";
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    return "more than a month ago";
+  };
 
   return (
     <div style={card.gradientWrapper}>
       <div style={card.wrap}>
-        <div
-          style={{
-            ...card.imgBg,
-            backgroundImage: previewUrl ? `url(${previewUrl})` : undefined,
-          }}
-        >
+        <div style={{ ...card.imgBg, backgroundImage: preview ? `url(${preview})` : undefined }}>
           <div style={card.overlay} />
 
-          {/* Top row — date + favorite */}
+          {/* Arrow button — absolute bottom right */}
+          <button style={card.arrowBtn} onClick={onPreview}>            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="#313C01" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+
+          {/* Top row */}
           <div style={card.topRow}>
-            <div style={card.dateBadge}>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
-                {new Date(cockpit.createdAt).toLocaleDateString("cs-CZ", { day: "numeric", month: "numeric", year: "numeric" })}
-              </span>
+            {/* Left — school badge + favorite */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative", zIndex: 2, overflow: "visible" }}>
+              <button
+                style={{
+                  ...card.favBtn,
+                  backgroundColor: cockpit.isFavorite ? "#E9FD97" : "rgba(0,0,0,0.45)",
+                }}
+                onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+                disabled={favLoading}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M13.8936 3.0726C13.5531 2.73193 13.1488 2.46169 12.7038 2.27732C12.2588 2.09295 11.7819 1.99805 11.3002 1.99805C10.8186 1.99805 10.3416 2.09295 9.89667 2.27732C9.4517 2.46169 9.04741 2.73193 8.70691 3.0726L8.00024 3.77926L7.29358 3.0726C6.60578 2.3848 5.67293 1.9984 4.70024 1.9984C3.72755 1.9984 2.7947 2.3848 2.10691 3.0726C1.41911 3.76039 1.03271 4.69324 1.03271 5.66593C1.03271 6.63862 1.41911 7.57147 2.10691 8.25926L8.00024 14.1526L13.8936 8.25926C14.2342 7.91876 14.5045 7.51447 14.6889 7.0695C14.8732 6.62453 14.9681 6.14759 14.9681 5.66593C14.9681 5.18427 14.8732 4.70733 14.6889 4.26236C14.5045 3.81739 14.2342 3.4131 13.8936 3.0726Z" stroke="#E9FD97" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
             </div>
 
-            <button
-              style={{ ...card.favBtn, ...(cockpit.isFavorite ? card.favBtnActive : {}) }}
-              onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
-              disabled={favLoading}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill={cockpit.isFavorite ? "#1a1a1a" : "none"} stroke={cockpit.isFavorite ? "#1a1a1a" : "rgba(255,255,255,0.7)"} strokeWidth="2">
-                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+            {/* Right — favorites count with trending icon */}
+            <div style={card.trendingBadge}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <g clipPath="url(#clip0_439_2699)">
+                  <path d="M15.3332 4L8.99984 10.3333L5.6665 7L0.666504 12M15.3332 4H11.3332M15.3332 4L15.3332 8" stroke="#E9FD97" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+                <defs><clipPath id="clip0_439_2699"><rect width="16" height="16" fill="white" /></clipPath></defs>
               </svg>
-              <span style={{ fontSize: 12, fontWeight: 500, color: cockpit.isFavorite ? "#1a1a1a" : "rgba(255,255,255,0.7)" }}>
-                {formatFavorites(cockpit.favoritesCount)}
-              </span>
-            </button>
+              <span style={card.trendingText}>{formatFavorites(cockpit.favoritesCount)}</span>
+            </div>
           </div>
 
           {/* Bottom content */}
-          <div style={card.bottom}>
-            {/* Name row */}
+          <div style={{ ...card.bottom, marginTop: "auto" }}>
+            {/* Name | model */}
             <div style={card.titleRow}>
               <span style={card.name}>{cockpit.name}</span>
-              {cockpit.registration && (
+              {cockpit.model && (
                 <>
                   <span style={card.divider}>|</span>
-                  <span style={card.registration}>{cockpit.registration}</span>
+                  <span style={card.manufacturer}>{cockpit.model}</span>
                 </>
               )}
             </div>
 
-            {/* Tags + arrow */}
-            <div style={card.bottomRow}>
-              <div style={card.tags}>
-                {tags.map(tag => (
-                  <span key={tag} style={card.tag}>{tag}</span>
-                ))}
-              </div>
-              <button
-                style={card.arrowBtn}
-                onClick={() => navigate(`/cockpits/${cockpit.id}`)}
-              >
-                <svg style={{ transform: "scale(10)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h14M12 5l7 7-7 7" />
-                </svg>
-              </button>
+            {/* Tags */}
+            <div style={card.tags}>
+              {tags.map(tag => (
+                <span key={tag} style={card.tag}>{tag}</span>
+              ))}
+            </div>
+
+            {/* Date */}
+            <div style={card.dateRow}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <g clipPath="url(#clip0_439_2727)">
+                  <path d="M8.00016 4.00065V8.00065L10.6668 9.33398M14.6668 8.00065C14.6668 11.6825 11.6821 14.6673 8.00016 14.6673C4.31826 14.6673 1.3335 11.6825 1.3335 8.00065C1.3335 4.31875 4.31826 1.33398 8.00016 1.33398C11.6821 1.33398 14.6668 4.31875 14.6668 8.00065Z" stroke="#E9FD97" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+                <defs><clipPath id="clip0_439_2727"><rect width="16" height="16" fill="white" /></clipPath></defs>
+              </svg>
+              <span style={card.dateText}>{timeAgo(cockpit.createdAt)}</span>
             </div>
           </div>
         </div>
@@ -165,9 +199,9 @@ const CockpitCard: React.FC<CardProps> = ({ cockpit, onToggleFav, favLoading }) 
 
 const card: Record<string, React.CSSProperties> = {
   gradientWrapper: {
-    padding: 1,
-    borderRadius: 17,
-    background: "linear-gradient(to bottom, #323232, #1e1e1e)",
+    borderRadius: 16,
+    overflow: "hidden",
+    flex: "1 0 0",
   },
   wrap: {
     borderRadius: 16,
@@ -176,81 +210,88 @@ const card: Record<string, React.CSSProperties> = {
   },
   imgBg: {
     position: "relative",
-    height: 220,
+    height: 256,
     backgroundSize: "cover",
     backgroundPosition: "center",
-    backgroundColor: "#1e1e1e",
+    backgroundColor: "#2a2a2a",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "space-between",
-    padding: "14px 14px 14px",
+    padding: 16,
+    gap: 16,
   },
   overlay: {
     position: "absolute",
     inset: 0,
-    background: "linear-gradient(to bottom, rgba(15,15,15,0.15) 0%, rgba(15,15,15,0.92) 100%)",
+    background: "linear-gradient(to bottom, rgba(25,25,25,0.1) 10%, rgb(25,25,25) 100%)",
     pointerEvents: "none",
   },
   topRow: {
     position: "relative",
-    zIndex: 1,
+    zIndex: 2,
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-  },
-  dateBadge: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    backdropFilter: "blur(8px)",
-    padding: "5px 10px",
-    borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.08)",
+    overflow: "visible",
   },
   favBtn: {
-    display: "flex",
+    height: 36,
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.45)",
     backdropFilter: "blur(8px)",
-    padding: "5px 10px",
+    border: "none",
     borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.08)",
     cursor: "pointer",
+    flexShrink: 0,
+    position: "relative",
+    zIndex: 1,
   },
   favBtnActive: {
-    backgroundColor: "#d4f06a",
-    border: "1px solid #d4f06a",
+    backgroundColor: "rgba(233,253,151,0.15)",
+    border: "none",
+  },
+  trendingBadge: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    backdropFilter: "blur(8px)",
+    padding: "6px 12px",
+    borderRadius: 8,
+  },
+  trendingText: {
+    color: "#E9FD97",
+    fontSize: 13,
+    fontWeight: 600,
   },
   bottom: {
     position: "relative",
     zIndex: 1,
     display: "flex",
     flexDirection: "column",
-    gap: 10,
+    gap: 8,
   },
   titleRow: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     flexWrap: "wrap",
   },
   name: {
     color: "#fff",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 600,
-    letterSpacing: 0.1,
+    letterSpacing: 0.2,
   },
   divider: {
-    color: "rgba(255,255,255,0.35)",
-    fontSize: 17,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 18,
     fontWeight: 300,
   },
-  registration: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 17,
-    fontWeight: 500,
+  manufacturer: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: 600,
   },
   bottomRow: {
     display: "flex",
@@ -259,30 +300,43 @@ const card: Record<string, React.CSSProperties> = {
   },
   tags: {
     display: "flex",
-    gap: 6,
+    gap: 8,
     flexWrap: "wrap",
   },
   tag: {
-    backgroundColor: "rgba(255,255,255,0.14)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     backdropFilter: "blur(6px)",
     color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 500,
-    padding: "5px 12px",
-    borderRadius: 7,
-    border: "1px solid rgba(255,255,255,0.1)",
+    padding: "6px 14px",
+    borderRadius: 8,
   },
   arrowBtn: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
     width: 40,
     height: 40,
-    borderRadius: 10,
-    backgroundColor: "#d4f06a",
+    borderRadius: 16,
+    backgroundColor: "#E9FD97",
     border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    zIndex: 2,
+    padding: 0,
+},
+  dateRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+  },
+  dateText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    fontWeight: 400,
   },
 };
 
@@ -369,6 +423,33 @@ const CockpitsPage: React.FC = () => {
   const [orderBy, setOrderBy] = useState<OrderBy>("new");
 
   const [favLoading, setFavLoading] = useState<Record<string, boolean>>({});
+  const [previewCockpit, setPreviewCockpit] = useState<CockpitDetail | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [modalMounted, setModalMounted] = useState(false);
+
+  const openPreview = async (cockpitId: string) => {
+    setModalMounted(true);
+    setPreviewLoading(true);
+    setPreviewCockpit(null);
+    // Небольшая задержка, чтобы DOM успел смонтировать элемент перед запуском transition
+    setTimeout(() => setModalVisible(true), 10);
+    try {
+      const { data } = await api.get<CockpitDetail>(`/cockpits/${cockpitId}`);
+      setPreviewCockpit(data);
+    } catch { } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const closePreview = () => {
+    setModalVisible(false);
+    // Ждём окончания анимации (300ms) перед размонтированием
+    setTimeout(() => {
+      setPreviewCockpit(null);
+      setModalMounted(false);
+    }, 300);
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -478,6 +559,16 @@ const CockpitsPage: React.FC = () => {
         button { transition: opacity 0.15s; }
         button:hover { opacity: 0.85; }
         input::placeholder { color: rgba(255,255,255,0.3); }
+        .modal-backdrop {
+          transition: opacity 0.3s ease, backdrop-filter 0.3s ease;
+        }
+        .modal-backdrop.hidden { opacity: 0; pointer-events: none; }
+        .modal-backdrop.visible { opacity: 1; }
+        .modal-box {
+          transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .modal-box.hidden { opacity: 0; transform: scale(0.92) translateY(16px); }
+        .modal-box.visible { opacity: 1; transform: scale(1) translateY(0); }
       `}</style>
 
       {/* ── Sidebar ── */}
@@ -485,8 +576,8 @@ const CockpitsPage: React.FC = () => {
         <div style={s.logo}>
           {!sidebarCollapsed && <span style={s.logoText}>ZENIT</span>}
           <button style={s.collapseBtn} onClick={() => setSidebarCollapsed(p => !p)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2">
-              {sidebarCollapsed ? <path d="M9 18l6-6-6-6" /> : <path d="M15 18l-6-6 6-6" />}
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M7.5 2.5V17.5M4.16667 2.5H15.8333C16.7538 2.5 17.5 3.24619 17.5 4.16667V15.8333C17.5 16.7538 16.7538 17.5 15.8333 17.5H4.16667C3.24619 17.5 2.5 16.7538 2.5 15.8333V4.16667C2.5 3.24619 3.24619 2.5 4.16667 2.5Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -543,21 +634,18 @@ const CockpitsPage: React.FC = () => {
           <h1 style={s.pageTitle}>Cockpits</h1>
 
           <div style={s.searchWrap}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-            </svg>
             <input
               style={s.searchInput}
-              placeholder="Search cockpits..."
+              placeholder="Search for cockpits, schools..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              onKeyDown={e => e.key === "Enter" && fetchCockpits()}
             />
-            {searchQuery && (
-              <button style={s.searchClear} onClick={() => { setSearchQuery(""); fetchCockpits(); }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
-              </button>
-            )}
+            <button style={s.searchBtn} onClick={fetchCockpits}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M14 14L11.1 11.1M12.6667 7.33333C12.6667 10.2789 10.2789 12.6667 7.33333 12.6667C4.38781 12.6667 2 10.2789 2 7.33333C2 4.38781 4.38781 2 7.33333 2C10.2789 2 12.6667 4.38781 12.6667 7.33333Z" stroke="#E9FD97" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
           </div>
 
           <div style={s.userInfo}>
@@ -606,6 +694,7 @@ const CockpitsPage: React.FC = () => {
                     cockpit={cockpit}
                     onToggleFav={() => toggleFavorite(cockpit.id)}
                     favLoading={!!favLoading[cockpit.id]}
+                    onPreview={() => openPreview(cockpit.id)}
                   />
                 ))}
               </div>
@@ -675,6 +764,7 @@ const CockpitsPage: React.FC = () => {
                     cockpit={cockpit}
                     onToggleFav={() => toggleFavorite(cockpit.id)}
                     favLoading={!!favLoading[cockpit.id]}
+                    onPreview={() => openPreview(cockpit.id)}
                   />
                 ))}
               </div>
@@ -689,6 +779,114 @@ const CockpitsPage: React.FC = () => {
           </svg>
         </button>
       </main>
+
+      {/* Preview Modal */}
+      {modalMounted && (
+        <div
+          className={`modal-backdrop ${modalVisible ? "visible" : "hidden"}`}
+          style={s.modalBackdrop}
+          onClick={closePreview}
+        >
+          <div
+            className={`modal-box ${modalVisible ? "visible" : "hidden"}`}
+            style={s.modalBox}
+            onClick={e => e.stopPropagation()}
+          >
+            {previewLoading ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
+                Loading...
+              </div>
+            ) : previewCockpit && (
+              <>
+                {/* Close button */}
+                <button style={s.modalClose} onClick={closePreview}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M12 4L4 12M4 4l8 8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                </button>
+
+                {/* Title */}
+                <h2 style={s.modalTitle}>{previewCockpit.name}</h2>
+
+                <div style={s.modalBody}>
+                  {/* Left — image */}
+                  <div style={s.modalLeft}>
+                    {(() => {
+                      const preview = previewCockpit.media.find(m => m.type === "PREVIEW") || previewCockpit.media.find(m => m.type === "PANORAMA") || previewCockpit.media[0];
+                      return preview ? (
+                        <img src={preview.link} alt={previewCockpit.name} style={s.modalImage} />
+                      ) : (
+                        <div style={{ ...s.modalImage, backgroundColor: "#2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 13 }}>No image</span>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Bottom buttons */}
+                    <div style={s.modalActions}>
+                      <button style={s.modalBtnSecondary} onClick={() => { closePreview(); navigate(`/cockpits/${previewCockpit.id}`); }}>
+                        Try test
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                          <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                      <button style={s.modalBtnPrimary} onClick={() => { closePreview(); navigate(`/cockpits/${previewCockpit.id}/learn`); }}>
+                        Start learning
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                          <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right — info */}
+                  <div style={s.modalRight}>
+                    <div>
+                      <h3 style={s.modalSectionTitle}>Description</h3>
+                      <p style={s.modalDescription}>
+                        {previewCockpit.manufacturer || previewCockpit.model
+                          ? `${previewCockpit.manufacturer ?? ""} ${previewCockpit.model ?? ""}`.trim()
+                          : "No description available."}
+                      </p>
+                      {previewCockpit.creator && (
+                        <p style={s.modalCreatedBy}>
+                          Created by: <span style={{ color: "#fff" }}>{[previewCockpit.creator.name, previewCockpit.creator.surname].filter(Boolean).join(" ") || "Unknown"}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Checklists */}
+                    {previewCockpit.checklists?.length > 0 && (
+                      <div>
+                        <h3 style={s.modalSectionTitle}>Check lists</h3>
+                        <div style={s.modalChecklists}>
+                          {previewCockpit.checklists.map(cl => (
+                            <button
+                              key={cl.id}
+                              style={s.modalChecklistRow}
+                              onClick={() => { closePreview(); navigate(`/cockpits/${previewCockpit.id}/checklist/${cl.id}`); }}
+                            >
+                              <span style={s.modalChecklistName}>{cl.name}</span>
+                              <div style={s.modalChecklistRight}>
+                                <div style={s.modalProgressBar}>
+                                  <div style={{ ...s.modalProgressFill, width: "0%" }} />
+                                </div>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                                  <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -729,10 +927,12 @@ const s: Record<string, React.CSSProperties> = {
     color: "#fff",
   },
   collapseBtn: {
-    width: 28, height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.08)",
+    width: 40,
+    height: 40,
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "transparent",
+    border: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -776,39 +976,50 @@ const s: Record<string, React.CSSProperties> = {
     borderBottom: "1px solid rgba(255,255,255,0.05)",
   },
   pageTitle: {
-    fontSize: 24,
-    fontWeight: 700,
+    width: 300,
+    fontSize: 40,
+    fontWeight: 400,
     color: "#fff",
     margin: 0,
     flexShrink: 0,
+    lineHeight: "120%",
+    letterSpacing: "0.5px",
   },
   searchWrap: {
     display: "flex",
+    width: 280,
+    minWidth: 120,
+    height: 40,
+    padding: "0 16px",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#1a1a1a",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 10,
-    padding: "0 12px",
-    flex: 1,
-    maxWidth: 360,
-    height: 38,
+    borderRadius: 8,
+    border: "1px solid #787971",
+    backgroundColor: "#121211",
+    position: "absolute",
+    left: "50%",
+    transform: "translateX(-50%)",
   },
   searchInput: {
     flex: 1,
     backgroundColor: "transparent",
     border: "none",
     outline: "none",
-    color: "#fff",
-    fontSize: 13,
+    color: "rgba(255,255,255,0.4)",
+    fontSize: 14,
+    fontWeight: 400,
+    lineHeight: "100%",
+    fontFamily: "inherit",
   },
-  searchClear: {
+  searchBtn: {
     backgroundColor: "transparent",
     border: "none",
     cursor: "pointer",
     padding: 0,
     display: "flex",
     alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   userInfo: {
     display: "flex",
@@ -955,6 +1166,175 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: "center",
     justifyContent: "center",
     boxShadow: "0 4px 20px rgba(212,240,106,0.3)",
+  },
+  modalBackdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    backdropFilter: "blur(6px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1000,
+  },
+  modalBox: {
+    position: "relative",
+    width: "66vw",
+    height: "66vh",
+    backgroundColor: "#1a1a1a",
+    borderRadius: 20,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    padding: 28,
+    gap: 20,
+  },
+  modalClose: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 0,
+    lineHeight: 0,
+    zIndex: 1,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 700,
+    color: "#fff",
+    margin: 0,
+    letterSpacing: "-0.4px",
+    flexShrink: 0,
+  },
+  modalBody: {
+    display: "flex",
+    gap: 28,
+    flex: 1,
+    overflow: "hidden",
+    minHeight: 0,
+  },
+  modalLeft: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 16,
+    width: "48%",
+    flexShrink: 0,
+  },
+  modalImage: {
+    width: "100%",
+    flex: 1,
+    objectFit: "cover" as const,
+    borderRadius: 12,
+    minHeight: 0,
+  },
+  modalActions: {
+    display: "flex",
+    gap: 10,
+    flexShrink: 0,
+  },
+  modalBtnSecondary: {
+    flex: 1,
+    height: 40,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    border: "none",
+    borderRadius: 10,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  modalBtnPrimary: {
+    flex: 1,
+    height: 40,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#E9FD97",
+    border: "none",
+    borderRadius: 10,
+    color: "#313C01",
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: "pointer",
+    fontFamily: "inherit",
+  },
+  modalRight: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    gap: 24,
+    overflowY: "auto" as const,
+  },
+  modalSectionTitle: {
+    fontSize: 20,
+    fontWeight: 700,
+    color: "#fff",
+    margin: "0 0 10px 0",
+    letterSpacing: "-0.3px",
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.65)",
+    lineHeight: "160%",
+    margin: "0 0 10px 0",
+  },
+  modalCreatedBy: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.4)",
+    margin: 0,
+  },
+  modalChecklists: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 8,
+  },
+  modalChecklistRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 16px",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 10,
+    border: "none",
+    cursor: "pointer",
+    width: "100%",
+    fontFamily: "inherit",
+  },
+  modalChecklistName: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 500,
+  },
+  modalChecklistRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+  },
+  modalProgressBar: {
+    width: 80,
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  modalProgressFill: {
+    height: "100%",
+    backgroundColor: "#E9FD97",
+    borderRadius: 2,
   },
 };
 
