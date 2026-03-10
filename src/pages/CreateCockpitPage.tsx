@@ -324,7 +324,7 @@ const CreateCockpitPage: React.FC = () => {
             // 1. Загрузка панорамы в GCS
             const formData = new FormData();
             formData.append("file", panoramaFile);
-            const { data: uploadData } = await api.post("/storage/upload", formData, {
+            const { data: uploadData } = await api.post("/storage/upload/panorama", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             const panoramaGcsUrl = uploadData.url;
@@ -370,7 +370,10 @@ const CreateCockpitPage: React.FC = () => {
                 hasIfr,
                 hasNight,
                 hasAutopilot,
-                media: [{ link: panoramaGcsUrl, type: "PANORAMA" }],
+                media: [
+                    { link: uploadData.originalUrl, type: "PANORAMA" },
+                    { link: uploadData.previewUrl, type: "PREVIEW" },
+                ],
                 instruments: instrumentsPayload,
                 checklists: checklistsPayload.length > 0 ? checklistsPayload : undefined,
             });

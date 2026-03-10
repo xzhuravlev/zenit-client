@@ -151,7 +151,7 @@ const CockpitCard: React.FC<CardProps> = ({ cockpit, onToggleFav, favLoading }) 
                 style={card.arrowBtn}
                 onClick={() => navigate(`/cockpits/${cockpit.id}`)}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg style={{ transform: "scale(10)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </button>
@@ -580,6 +580,21 @@ const CockpitsPage: React.FC = () => {
         <div style={s.content}>
           {error && <div style={{ color: "#ff6b6b", fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
+          {/* News */}
+          <div style={s.newsBannerWrapper}>
+            <div style={s.newsBanner}>
+              <div style={s.newsIcon}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14 }}>News from Zenit???</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2" style={{ marginLeft: "auto", flexShrink: 0 }}>
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </div>
+          </div>
+
           {/* Recents */}
           {recentCockpits.length > 0 && (
             <section style={s.section}>
@@ -666,6 +681,13 @@ const CockpitsPage: React.FC = () => {
             )}
           </section>
         </div>
+
+        {/* Floating create button */}
+        <button style={s.createBtn} onClick={() => navigate("/cockpits/create")}>
+          <svg style={{ transform: "scale(1.5)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
       </main>
     </div>
   );
@@ -811,6 +833,31 @@ const s: Record<string, React.CSSProperties> = {
     overflowY: "auto",
     padding: "28px 28px 40px",
   },
+  newsBannerWrapper: {
+    padding: 1,
+    borderRadius: 13,
+    background: "linear-gradient(to bottom, #323232, #1e1e1e)",
+    marginBottom: 28,
+  },
+  newsBanner: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 12,
+    padding: "14px 18px",
+    cursor: "pointer",
+  },
+  newsIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
   section: {
     marginBottom: 36,
   },
@@ -893,6 +940,21 @@ const s: Record<string, React.CSSProperties> = {
     color: "rgba(255,255,255,0.4)",
     fontSize: 12,
     cursor: "pointer",
+  },
+  createBtn: {
+    position: "absolute",
+    bottom: 28,
+    right: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: "#d4f06a",
+    border: "none",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 20px rgba(212,240,106,0.3)",
   },
 };
 
