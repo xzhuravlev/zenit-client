@@ -41,10 +41,12 @@ interface PanoramaViewerProps {
     instruments: Instrument[];
     addingMode: boolean;
     onAddInstrument: (pitch: number, yaw: number, x: number, y: number) => void;
+    onHotspotClick: (instrument: Instrument, screenX: number, screenY: number) => void;
+    onDismissTooltip: () => void;
 }
 
 const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
-    imageUrl, instruments, addingMode, onAddInstrument,
+    imageUrl, instruments, addingMode, onAddInstrument, onHotspotClick, onDismissTooltip,
 }) => {
     const mountRef = useRef<HTMLDivElement>(null);
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -55,6 +57,7 @@ const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     const spherical = useRef({ phi: Math.PI / 2, theta: 0 });
     const animFrameRef = useRef<number>(0);
     const hotspotGroupRef = useRef<THREE.Group | null>(null);
+    const mouseNDC = useRef({ x: 0, y: 0 }); // нормализованные координаты мыши [-1, 1]
 
     useEffect(() => {
         if (!mountRef.current) return;
@@ -100,11 +103,36 @@ const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         const animate = () => {
             animFrameRef.current = requestAnimationFrame(animate);
             const { phi, theta } = spherical.current;
-            camera.lookAt(
+            const lookTarget = new THREE.Vector3(
                 Math.sin(phi) * Math.cos(theta),
                 Math.cos(phi),
                 Math.sin(phi) * Math.sin(theta)
             );
+            camera.lookAt(lookTarget);
+
+            // Обновляем opacity хотспотов в зависимости от расстояния до мыши
+            if (hotspotGroup.children.length > 0) {
+                const raycaster = new THREE.Raycaster();
+                raycaster.setFromCamera(new THREE.Vector2(mouseNDC.current.x, mouseNDC.current.y), camera);
+                const mouseDir = raycaster.ray.direction.normalize();
+
+                hotspotGroup.children.forEach(child => {
+                    const mesh = child as THREE.Mesh;
+                    if (!mesh.userData?.isHotspot) return;
+                    const hotspotDir = mesh.position.clone().normalize();
+                    // dotProduct: 1 = совпадает, 0 = 90°, -1 = противоположно
+                    const dot = mouseDir.dot(hotspotDir);
+                    // Переводим в угол в градусах
+                    const angleDeg = Math.acos(Math.max(-1, Math.min(1, dot))) * (180 / Math.PI);
+                    // Близко (< 3°) → 0.1, далеко (> 15°) → 0.8, плавно между ними
+                    const NEAR = 3;
+                    const FAR = 15;
+                    const t = Math.max(0, Math.min(1, (angleDeg - NEAR) / (FAR - NEAR)));
+                    const opacity = 0.05 + t * 0.7; // 0.1 → 0.8
+                    (mesh.material as THREE.MeshBasicMaterial).opacity = opacity;
+                });
+            }
+
             renderer.render(scene, camera);
         };
         animate();
@@ -138,8 +166,9 @@ const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
 
         instruments.forEach(inst => {
             const geometry = new THREE.SphereGeometry(4, 16, 16);
-            const material = new THREE.MeshBasicMaterial({ color: 0xd4f06a });
+            const material = new THREE.MeshBasicMaterial({ color: 0xd4f06a, transparent: true, opacity: 0.5 });
             const hotspot = new THREE.Mesh(geometry, material);
+            hotspot.userData = { isHotspot: true, instrumentLocalId: inst.localId };
 
             const r = 498;
             hotspot.position.set(
@@ -155,26 +184,34 @@ const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
     const handleMouseDown = (e: React.MouseEvent) => {
         isDragging.current = false;
         lastMouse.current = { x: e.clientX, y: e.clientY };
+        onDismissTooltip();
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
+        // Обновляем NDC позицию мыши для proximity-эффекта
+        if (mountRef.current) {
+            const rect = mountRef.current.getBoundingClientRect();
+            mouseNDC.current = {
+                x: ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                y: -((e.clientY - rect.top) / rect.height) * 2 + 1,
+            };
+        }
+
         if (e.buttons !== 1) return;
         const dx = e.clientX - lastMouse.current.x;
         const dy = e.clientY - lastMouse.current.y;
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging.current = true;
         lastMouse.current = { x: e.clientX, y: e.clientY };
 
-        // sensitivity зависит от FOV — чем меньше FOV, тем медленнее
         const fov = cameraRef.current?.fov ?? 20;
         const sensitivity = (fov / 20) * 0.0004;
-        
 
         spherical.current.theta -= dx * sensitivity;
         spherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, spherical.current.phi - dy * sensitivity));
     };
 
     const handleClick = (e: React.MouseEvent) => {
-        if (!addingMode || isDragging.current || !mountRef.current || !cameraRef.current) return;
+        if (isDragging.current || !mountRef.current || !cameraRef.current) return;
 
         const rect = mountRef.current.getBoundingClientRect();
         const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -183,11 +220,26 @@ const PanoramaViewer: React.FC<PanoramaViewerProps> = ({
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(nx, ny), cameraRef.current);
 
+        // Сначала проверяем попадание в хотспоты
+        if (hotspotGroupRef.current) {
+            const hits = raycaster.intersectObjects(hotspotGroupRef.current.children);
+            const hotspotHit = hits.find(h => h.object.userData?.isHotspot);
+            if (hotspotHit) {
+                const inst = instruments.find(i => i.localId === hotspotHit.object.userData.instrumentLocalId);
+                if (inst) {
+                    onHotspotClick(inst, e.clientX, e.clientY);
+                    return;
+                }
+            }
+        }
+
+        // Иначе — режим добавления
+        if (!addingMode) return;
+
         const dir = raycaster.ray.direction.normalize().multiplyScalar(498);
         const pitch = Math.acos(dir.y / 498);
         const yaw = Math.atan2(dir.z, dir.x);
 
-        // Конвертируем в проценты для хранения в БД
         const xPct = ((yaw / (2 * Math.PI)) + 0.5) * 100;
         const yPct = (pitch / Math.PI) * 100;
 
@@ -271,6 +323,9 @@ const CreateCockpitPage: React.FC = () => {
     // Instruments
     const [instruments, setInstruments] = useState<Instrument[]>([]);
     const [addingMode, setAddingMode] = useState(false);
+
+    // Tooltip при клике на хотспот
+    const [tooltip, setTooltip] = useState<{ instrument: Instrument; x: number; y: number } | null>(null);
 
     // Checklists
     const [checklists, setChecklists] = useState<Checklist[]>([]);
@@ -413,7 +468,34 @@ const CreateCockpitPage: React.FC = () => {
                             instruments={instruments}
                             addingMode={addingMode}
                             onAddInstrument={handleAddInstrument}
+                            onHotspotClick={(inst, x, y) => setTooltip({ instrument: inst, x, y })}
+                            onDismissTooltip={() => setTooltip(null)}
                         />
+                        {/* Hotspot tooltip */}
+                        {tooltip && (
+                            <div
+                                style={{
+                                    position: "fixed",
+                                    left: tooltip.x + 14,
+                                    top: tooltip.y - 14,
+                                    backgroundColor: "#1a1a1a",
+                                    border: "1px solid rgba(212,240,106,0.3)",
+                                    borderRadius: 10,
+                                    padding: "10px 14px",
+                                    zIndex: 50,
+                                    pointerEvents: "none",
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                                    minWidth: 140,
+                                }}
+                            >
+                                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 }}>Instrument</div>
+                                <div style={{ fontSize: 15, fontWeight: 600, color: "#fff" }}>{tooltip.instrument.name || "Unnamed"}</div>
+                                {tooltip.instrument.description && (
+                                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", marginTop: 4, lineHeight: "150%" }}>{tooltip.instrument.description}</div>
+                                )}
+                                <div style={{ width: 6, height: 6, backgroundColor: "#d4f06a", borderRadius: "50%", marginTop: 8 }} />
+                            </div>
+                        )}
                         {/* Overlay hint */}
                         {addingMode && (
                             <div style={s.addingHint}>
@@ -555,7 +637,7 @@ const CreateCockpitPage: React.FC = () => {
                                             </button>
                                         </div>
                                         <Field
-                                            label="Name *"
+                                            label="Name"
                                             value={inst.name}
                                             onChange={v => setInstruments(prev => prev.map(i => i.localId === inst.localId ? { ...i, name: v } : i))}
                                             placeholder="Altimeter"
@@ -829,6 +911,8 @@ const s: Record<string, React.CSSProperties> = {
         justifyContent: "center",
         color: "rgba(255,255,255,0.6)",
         flexShrink: 0,
+        padding: 0,
+        lineHeight: 0,
     },
     panelTitle: {
         fontSize: 16,
@@ -991,6 +1075,8 @@ const s: Record<string, React.CSSProperties> = {
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
+        padding: 0,
+        lineHeight: 0,
     },
     addBtn: {
         display: "flex",
