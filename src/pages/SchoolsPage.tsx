@@ -1,841 +1,156 @@
-import { useEffect, useState, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
-import { auth } from "../firebase/firebase";
-import { onAuthStateChanged } from "firebase/auth";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type SchoolMemberRole = "OWNER" | "INSTRUCTOR" | "STUDENT";
-
-interface SchoolMedia {
-  id: string;
-  link: string;
-  type: "PHOTO" | "TEXT";
-  order: number | null;
-}
-
-interface SchoolMember {
-  id: string;
-  role: SchoolMemberRole;
-  user: { id: string; name: string | null; surname: string | null; avatar: string | null; email: string };
-}
-
-interface School {
-  id: string;
-  name: string;
-  description: string | null;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  instagram: string | null;
-  createdAt: string;
-  media: SchoolMedia[];
-  _count: { members: number; cockpits: number };
-}
-
-interface SchoolDetail extends School {
-  members: SchoolMember[];
-  currentUserRole: SchoolMemberRole | null;
-}
-
-interface SchoolsResponse {
-  items: School[];
-  total: number;
-  page: number;
-  totalPages: number;
-}
-
-interface CurrentUser {
-  id: string;
-  name: string | null;
-  surname: string | null;
-  role: string;
-  avatar: string | null;
-}
-
-// ─── SchoolCard ───────────────────────────────────────────────────────────────
-
-interface CardProps {
-  school: School;
-  onPreview: () => void;
-}
-
-const SchoolCard: React.FC<CardProps> = ({ school, onPreview }) => {
-  const photo = school.media.find(m => m.type === "PHOTO");
-
-  return (
-    <div style={card.wrap}>
-      <div style={{ ...card.imgBg, backgroundImage: photo ? `url(${photo.link})` : undefined }}>
-        <div style={card.overlay} />
-
-        {/* Arrow button */}
-        <button style={card.arrowBtn} onClick={onPreview}>
-          <svg style={{ display: "block" }} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="#313C01" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
-
-        {/* Bottom info */}
-        <div style={card.bottom}>
-          <div style={card.bottomRow}>
-            <span style={card.name}>{school.name}</span>
-            <div style={card.stats}>
-              <span style={card.statItem}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>
-                {school._count.members}
-              </span>
-              <span style={card.statItem}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 9h6M9 12h6M9 15h4" /></svg>
-                {school._count.cockpits}
-              </span>
-            </div>
-          </div>
-          {school.address && <span style={card.address}>{school.address}</span>}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const card: Record<string, React.CSSProperties> = {
-  wrap: {
-    borderRadius: 16,
-    overflow: "hidden",
-    cursor: "pointer",
-    flex: "1 0 0",
-    minWidth: 0,
-  },
-  imgBg: {
-    position: "relative",
-    height: 256,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundColor: "#2a2a2a",
-    display: "flex",
-    flexDirection: "column",
-    padding: 16,
-  },
-  overlay: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(to bottom, rgba(25,25,25,0.05) 20%, rgba(25,25,25,0.88) 100%)",
-    pointerEvents: "none",
-  },
-  bottom: {
-    position: "relative",
-    zIndex: 1,
-    marginTop: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-  },
-  bottomRow: {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  name: {
-    color: "#fff",
-    fontSize: 20,
-    fontWeight: 600,
-    letterSpacing: 0.2,
-  },
-  stats: {
-    display: "flex",
-    gap: 12,
-    alignItems: "center",
-  },
-  statItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 5,
-    color: "#E9FD97",
-    fontSize: 13,
-    fontWeight: 500,
-  },
-  address: {
-    color: "rgba(255,255,255,0.45)",
-    fontSize: 13,
-  },
-  arrowBtn: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 16,
-    backgroundColor: "#E9FD97",
-    border: "none",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-    padding: 0,
-  },
-};
+const WORLD_MAP_IMAGE = "/media/map.svg";
 
 // ─── SchoolsPage ──────────────────────────────────────────────────────────────
 
 const SchoolsPage: React.FC = () => {
-  const navigate = useNavigate();
-  const [authReady, setAuthReady] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeNav] = useState("schools");
+    const navigate = useNavigate();
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [activeNav] = useState("schools");
 
-  const [schools, setSchools] = useState<School[]>([]);
-  const [mySchools, setMySchools] = useState<School[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
-  // Modal
-  const [previewSchool, setPreviewSchool] = useState<SchoolDetail | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [modalMounted, setModalMounted] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [joinLoading, setJoinLoading] = useState(false);
-  const modalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    // ─── Render ───────────────────────────────────────────────────────────────
 
-  // ─── Auth ─────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) setAuthReady(true);
-      else window.location.href = "/auth";
-    });
-    return () => unsubscribe();
-  }, []);
+    return (
+        <div style={s.root}>
+            {WORLD_MAP_IMAGE && ( <img src={WORLD_MAP_IMAGE} style={s.worldMap} /> )}
 
-  useEffect(() => {
-    if (!authReady) return;
-    fetchCurrentUser();
-    fetchMySchools();
-    fetchSchools();
-  }, [authReady]);
-
-  // ─── Data fetching ────────────────────────────────────────────────────────
-
-  const fetchCurrentUser = async () => {
-    try {
-      const { data } = await api.get<CurrentUser>("/user/me");
-      setCurrentUser(data);
-    } catch { }
-  };
-
-  const fetchSchools = async (p = 1) => {
-    setLoading(true);
-    try {
-      const { data } = await api.get<SchoolsResponse>("/school", {
-        params: { page: p, ...(searchQuery ? { name: searchQuery } : {}) },
-      });
-      setSchools(data.items);
-      setTotalPages(data.totalPages);
-      setPage(p);
-    } catch { } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchMySchools = async () => {
-    try {
-      // My schools = schools where I am a member (OWNER/INSTRUCTOR/STUDENT)
-      // We filter on client from the full list for now
-      const { data } = await api.get<SchoolsResponse>("/school", { params: { page: 1 } });
-      // Backend will ideally support ?mySchools=true — for now show all as available
-      setMySchools([]);
-    } catch { }
-  };
-
-  const openPreview = async (schoolId: string) => {
-    setPreviewLoading(true);
-    setPreviewSchool(null);
-    setModalMounted(true);
-    setTimeout(() => setModalVisible(true), 10);
-    try {
-      const { data } = await api.get<SchoolDetail>(`/school/${schoolId}`);
-      setPreviewSchool(data);
-    } catch { } finally {
-      setPreviewLoading(false);
-    }
-  };
-
-  const closePreview = () => {
-    setModalVisible(false);
-    if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
-    modalTimerRef.current = setTimeout(() => {
-      setModalMounted(false);
-      setPreviewSchool(null);
-    }, 300);
-  };
-
-  const handleJoin = async () => {
-    if (!previewSchool) return;
-    setJoinLoading(true);
-    try {
-      await api.post(`/school/${previewSchool.id}/join`);
-      // Refresh school detail
-      const { data } = await api.get<SchoolDetail>(`/school/${previewSchool.id}`);
-      setPreviewSchool(data);
-      fetchSchools(page);
-    } catch { } finally {
-      setJoinLoading(false);
-    }
-  };
-
-  const handleLeave = async () => {
-    if (!previewSchool) return;
-    setJoinLoading(true);
-    try {
-      await api.delete(`/school/${previewSchool.id}/leave`);
-      const { data } = await api.get<SchoolDetail>(`/school/${previewSchool.id}`);
-      setPreviewSchool(data);
-      fetchSchools(page);
-    } catch { } finally {
-      setJoinLoading(false);
-    }
-  };
-
-  // ─── Nav ──────────────────────────────────────────────────────────────────
-
-  const navItems = [
-    {
-      id: "cockpits", label: "Cockpits",
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>,
-    },
-    {
-      id: "schools", label: "Schools",
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z" /><path d="M6 12v5c3 3 9 3 12 0v-5" /></svg>,
-    },
-    {
-      id: "users", label: "Users",
-      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" /></svg>,
-    },
-  ];
-
-  const displayName = currentUser
-    ? [currentUser.name, currentUser.surname].filter(Boolean).join(" ")
-    : "User";
-
-  if (!authReady) return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", backgroundColor: "#111", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif" }}>
-      Loading...
-    </div>
-  );
-
-  // ─── Render ───────────────────────────────────────────────────────────────
-
-  return (
-    <div style={s.root}>
-      <style>{`
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-        button { transition: opacity 0.15s; }
-        button:hover { opacity: 0.85; }
-        input::placeholder { color: rgba(255,255,255,0.3); }
-        .modal-backdrop { transition: opacity 0.3s ease, backdrop-filter 0.3s ease; }
-        .modal-backdrop.hidden { opacity: 0; pointer-events: none; }
-        .modal-backdrop.visible { opacity: 1; }
-        .modal-box { transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .modal-box.hidden { opacity: 0; transform: scale(0.92) translateY(16px); }
-        .modal-box.visible { opacity: 1; transform: scale(1) translateY(0); }
-      `}</style>
-
-      {/* ── Sidebar ── */}
-      <aside style={{ ...s.sidebar, width: sidebarCollapsed ? 64 : 200 }}>
-        <div style={s.logo}>
-          {!sidebarCollapsed && <span style={s.logoText}>ZENIT</span>}
-          <button style={s.collapseBtn} onClick={() => setSidebarCollapsed(p => !p)}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <path d="M7.5 2.5V17.5M4.16667 2.5H15.8333C16.7538 2.5 17.5 3.24619 17.5 4.16667V15.8333C17.5 16.7538 16.7538 17.5 15.8333 17.5H4.16667C3.24619 17.5 2.5 16.7538 2.5 15.8333V4.16667C2.5 3.24619 3.24619 2.5 4.16667 2.5Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-        </div>
-
-        <nav style={s.nav}>
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              style={{
-                ...s.navItem,
-                ...(activeNav === item.id ? s.navItemActive : {}),
-                justifyContent: sidebarCollapsed ? "center" : "flex-start",
-              }}
-              onClick={() => navigate(`/${item.id}`)}
-            >
-              <span style={{
-                width: 28, height: 28, borderRadius: 7,
-                backgroundColor: activeNav === item.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
-                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                color: activeNav === item.id ? "#E9FD97" : "rgba(255,255,255,0.45)",
-              }}>{item.icon}</span>
-              {!sidebarCollapsed && (
-                <span style={{ color: activeNav === item.id ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 14 }}>
-                  {item.label}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-
-        <button
-          style={{ ...s.navItem, marginTop: "auto", justifyContent: sidebarCollapsed ? "center" : "flex-start" }}
-          onClick={() => navigate("/settings")}
-        >
-          <span style={{ width: 28, height: 28, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: "rgba(255,255,255,0.45)" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
-          </span>
-          {!sidebarCollapsed && <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 14 }}>Settings</span>}
-        </button>
-      </aside>
-
-      {/* ── Main ── */}
-      <main style={{ ...s.main, position: "relative" }}>
-
-        {/* TopBar */}
-        <div style={s.topBar}>
-          <h1 style={s.pageTitle}>Schools</h1>
-
-          <div style={s.searchWrap}>
-            <input
-              style={s.searchInput}
-              placeholder="Search for cockpits, schools..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && fetchSchools(1)}
-            />
-            <button style={s.searchBtn} onClick={() => fetchSchools(1)}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M14 14L11.1 11.1M12.6667 7.33333C12.6667 10.2789 10.2789 12.6667 7.33333 12.6667C4.38781 12.6667 2 10.2789 2 7.33333C2 4.38781 4.38781 2 7.33333 2C10.2789 2 12.6667 4.38781 12.6667 7.33333Z" stroke="#E9FD97" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-
-          {/* User info */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto" }}>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{displayName}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{currentUser?.role}</div>
-            </div>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: "#2a2a2a", overflow: "hidden", flexShrink: 0 }}>
-              {currentUser?.avatar
-                ? <img src={currentUser.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(255,255,255,0.3)", fontSize: 14 }}>
-                  {displayName.charAt(0).toUpperCase()}
+            {/* Sidebar */}
+            <aside style={{ ...s.sidebar, width: sidebarCollapsed ? 64 : 200 }}>
+                {/* Logo */}
+                <div style={s.logo}>
+                    {!sidebarCollapsed && <span>ZENIT</span>}
                 </div>
-              }
-            </div>
-          </div>
-        </div>
 
-        {/* Content */}
-        <div style={s.content}>
-
-          {/* My schools */}
-          {mySchools.length > 0 && (
-            <section style={{ ...s.section, alignSelf: "stretch" }}>
-              <h2 style={s.sectionTitle}>My schools</h2>
-              <div style={s.grid}>
-                {mySchools.map(school => (
-                  <SchoolCard key={school.id} school={school} onPreview={() => openPreview(school.id)} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Available schools */}
-          <section style={{ ...s.section, alignSelf: "stretch" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
-              <h2 style={s.sectionTitle}>Available schools</h2>
-            </div>
-
-            {loading ? (
-              <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>Loading...</div>
-            ) : schools.length === 0 ? (
-              <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>No schools found</div>
-            ) : (
-              <div style={s.grid}>
-                {schools.map(school => (
-                  <SchoolCard key={school.id} school={school} onPreview={() => openPreview(school.id)} />
-                ))}
-              </div>
-            )}
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div style={{ display: "flex", gap: 8, marginTop: 24, alignItems: "center" }}>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button
-                    key={p}
-                    style={{
-                      width: 32, height: 32, borderRadius: 8, border: "none", cursor: "pointer",
-                      backgroundColor: p === page ? "#E9FD97" : "rgba(255,255,255,0.08)",
-                      color: p === page ? "#313C01" : "rgba(255,255,255,0.6)",
-                      fontSize: 13, fontWeight: 600, fontFamily: "inherit",
-                    }}
-                    onClick={() => fetchSchools(p)}
-                  >{p}</button>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
-
-        {/* Floating create button */}
-        <button style={s.createBtn} onClick={() => navigate("/schools/create")}>
-          <svg style={{ transform: "scale(1.5)" }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1a1a" strokeWidth="2.5">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        </button>
-      </main>
-
-      {/* ── Preview Modal ── */}
-      {modalMounted && (
-        <div
-          className={`modal-backdrop ${modalVisible ? "visible" : "hidden"}`}
-          style={s.modalBackdrop}
-          onClick={closePreview}
-        >
-          <div
-            className={`modal-box ${modalVisible ? "visible" : "hidden"}`}
-            style={s.modalBox}
-            onClick={e => e.stopPropagation()}
-          >
-            {previewLoading ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "rgba(255,255,255,0.4)", fontSize: 14 }}>
-                Loading...
-              </div>
-            ) : previewSchool && (
-              <>
-                {/* Close */}
-                <button style={s.modalClose} onClick={closePreview}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M12 4L4 12M4 4l8 8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
-                  </svg>
-                </button>
-
-                <h2 style={s.modalTitle}>{previewSchool.name}</h2>
-
-                <div style={s.modalBody}>
-                  {/* Left — photo */}
-                  <div style={s.modalLeft}>
-                    {(() => {
-                      const photo = previewSchool.media.find(m => m.type === "PHOTO");
-                      return photo ? (
-                        <img src={photo.link} alt={previewSchool.name} style={s.modalImage} />
-                      ) : (
-                        <div style={{ ...s.modalImage, backgroundColor: "#2a2a2a", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 13 }}>No photo</span>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Action buttons */}
-                    <div style={s.modalActions}>
-                      <button
-                        style={s.modalBtnSecondary}
-                        onClick={() => { closePreview(); navigate(`/schools/${previewSchool.id}/cockpits`); }}
-                      >
-                        View cockpits
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                          <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </button>
-
-                      {previewSchool.currentUserRole === null && (
-                        <button style={s.modalBtnPrimary} onClick={handleJoin} disabled={joinLoading}>
-                          {joinLoading ? "..." : "Join school"}
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                            <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                {/* Navigation */}
+                <nav style={s.nav}>
+                    {navItems.map(item => (
+                        <button
+                            key={item.id}
+                            style={{
+                                ...s.navItem,
+                                ...(activeNav === item.id ? s.navItemActive : {}),
+                                justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                            }}
+                            onClick={() => navigate(`/${item.id}`)}
+                        >
+                            <span style={{
+                                width: 32, height: 32, borderRadius: 7,
+                                backgroundColor: activeNav === item.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                color: activeNav === item.id ? "#E9FD97" : "rgba(255,255,255,0.45)",
+                            }}>{item.icon}</span>
+                            {!sidebarCollapsed && (
+                                <span style={{ color: activeNav === item.id ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 18 }}>
+                                    {item.label}
+                                </span>
+                            )}
                         </button>
-                      )}
+                    ))}
+                </nav>
+            </aside>
 
-                      {previewSchool.currentUserRole === "STUDENT" && (
-                        <button style={{ ...s.modalBtnPrimary, backgroundColor: "rgba(255,80,80,0.15)", color: "#ff6b6b" }} onClick={handleLeave} disabled={joinLoading}>
-                          {joinLoading ? "..." : "Leave school"}
-                        </button>
-                      )}
-
-                      {(previewSchool.currentUserRole === "OWNER" || previewSchool.currentUserRole === "INSTRUCTOR") && (
-                        <button style={s.modalBtnPrimary} onClick={() => { closePreview(); navigate(`/schools/${previewSchool.id}/manage`); }}>
-                          Manage school
-                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                            <path d="M4.1665 9.99935H15.8332M15.8332 9.99935L9.99984 4.16602M15.8332 9.99935L9.99984 15.8327" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Right — info */}
-                  <div style={s.modalRight}>
-                    {/* Role badge */}
-                    {previewSchool.currentUserRole && (
-                      <div style={s.roleBadge}>
-                        {previewSchool.currentUserRole === "OWNER" && "👑 Owner"}
-                        {previewSchool.currentUserRole === "INSTRUCTOR" && "✈️ Instructor"}
-                        {previewSchool.currentUserRole === "STUDENT" && "🎓 Student"}
-                      </div>
-                    )}
-
-                    <div>
-                      <h3 style={s.modalSectionTitle}>About</h3>
-                      <p style={s.modalDescription}>
-                        {previewSchool.description || "No description provided."}
-                      </p>
-                    </div>
-
-                    {/* Contacts */}
-                    <div>
-                      <h3 style={s.modalSectionTitle}>Contacts</h3>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                        {previewSchool.address && <InfoRow icon="📍" label={previewSchool.address} />}
-                        {previewSchool.phone && <InfoRow icon="📞" label={previewSchool.phone} />}
-                        {previewSchool.email && <InfoRow icon="✉️" label={previewSchool.email} />}
-                        {previewSchool.website && <InfoRow icon="🌐" label={previewSchool.website} link={previewSchool.website} />}
-                        {previewSchool.instagram && <InfoRow icon="📷" label={`@${previewSchool.instagram}`} />}
-                        {!previewSchool.address && !previewSchool.phone && !previewSchool.email && !previewSchool.website && (
-                          <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>No contact info</span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div style={{ display: "flex", gap: 16 }}>
-                      <div style={s.statCard}>
-                        <span style={s.statNum}>{previewSchool._count.members}</span>
-                        <span style={s.statLabel}>Members</span>
-                      </div>
-                      <div style={s.statCard}>
-                        <span style={s.statNum}>{previewSchool._count.cockpits}</span>
-                        <span style={s.statLabel}>Cockpits</span>
-                      </div>
-                    </div>
-
-                    {/* Instructors */}
-                    {previewSchool.members.filter(m => m.role === "INSTRUCTOR" || m.role === "OWNER").length > 0 && (
-                      <div>
-                        <h3 style={s.modalSectionTitle}>Instructors</h3>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {previewSchool.members
-                            .filter(m => m.role === "INSTRUCTOR" || m.role === "OWNER")
-                            .map(m => (
-                              <div key={m.id} style={s.memberRow}>
-                                <div style={s.memberAvatar}>
-                                  {m.user.avatar
-                                    ? <img src={m.user.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
-                                    : <span style={{ fontSize: 13, color: "rgba(255,255,255,0.5)" }}>
-                                      {(m.user.name || m.user.email || "?").charAt(0).toUpperCase()}
-                                    </span>
-                                  }
-                                </div>
-                                <div>
-                                  <div style={{ fontSize: 13, color: "#fff", fontWeight: 500 }}>
-                                    {[m.user.name, m.user.surname].filter(Boolean).join(" ") || m.user.email}
-                                  </div>
-                                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{m.role}</div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+            {/* Main */}
+            <main style={s.main}>
+                
+            </main>
+            {/* TopBar */}
+            {/* Schools */}
         </div>
-      )}
-    </div>
-  );
-};
+    );
+}
 
-// ─── Helper components ────────────────────────────────────────────────────────
+// ─── Nav ──────────────────────────────────────────────────────────────────
 
-const InfoRow: React.FC<{ icon: string; label: string; link?: string }> = ({ icon, label, link }) => (
-  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-    <span style={{ fontSize: 14 }}>{icon}</span>
-    {link ? (
-      <a href={link} target="_blank" rel="noopener noreferrer" style={{ color: "#E9FD97", fontSize: 13, textDecoration: "none" }}>{label}</a>
-    ) : (
-      <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 13 }}>{label}</span>
-    )}
-  </div>
-);
+const navItems = [
+    {
+        id: "cockpits", label: "Cockpits",
+        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.7448 2.81298C18.7095 1.8165 20.3036 1.80361 21.2843 2.78436C22.2382 3.73823 22.2559 5.27921 21.3243 6.25481L18.5456 9.16457C18.3278 9.39265 18.219 9.50668 18.1518 9.64024C18.0924 9.75847 18.0571 9.88732 18.0478 10.0193C18.0374 10.1684 18.0728 10.3221 18.1438 10.6293L19.8717 18.1169C19.9444 18.4323 19.9808 18.59 19.9691 18.7426C19.9587 18.8776 19.921 19.0091 19.8582 19.1291C19.7873 19.2647 19.6729 19.3792 19.444 19.608L19.0732 19.9788C18.4671 20.585 18.164 20.888 17.8538 20.9429C17.583 20.9908 17.3043 20.925 17.0835 20.761C16.8306 20.5733 16.695 20.1666 16.424 19.3534L14.4142 13.3241L11.0689 16.6695C10.8692 16.8691 10.7694 16.969 10.7026 17.0866C10.6434 17.1907 10.6034 17.3047 10.5846 17.423C10.5633 17.5565 10.5789 17.6968 10.61 17.9775L10.7937 19.6309C10.8249 19.9116 10.8405 20.0519 10.8192 20.1854C10.8004 20.3037 10.7604 20.4177 10.7012 20.5219C10.6344 20.6394 10.5346 20.7393 10.3349 20.939L10.1374 21.1365C9.66434 21.6095 9.42781 21.8461 9.16496 21.9146C8.93442 21.9746 8.68999 21.9504 8.47571 21.8463C8.2314 21.7276 8.04585 21.4493 7.67475 20.8926L6.10643 18.5401C6.04013 18.4407 6.00698 18.391 5.96849 18.3459C5.9343 18.3058 5.89701 18.2685 5.85694 18.2343C5.81184 18.1958 5.76212 18.1627 5.66267 18.0964L3.31018 16.5281C2.75354 16.157 2.47521 15.9714 2.35649 15.7271C2.25236 15.5128 2.22816 15.2684 2.28824 15.0378C2.35674 14.775 2.59327 14.5385 3.06633 14.0654L3.26384 13.8679C3.46352 13.6682 3.56337 13.5684 3.68095 13.5016C3.78511 13.4424 3.89906 13.4024 4.01736 13.3836C4.15089 13.3623 4.29123 13.3779 4.5719 13.4091L6.22529 13.5928C6.50596 13.6239 6.6463 13.6395 6.77983 13.6182C6.89813 13.5994 7.01208 13.5594 7.11624 13.5002C7.23382 13.4334 7.33366 13.3336 7.53335 13.1339L10.8787 9.7886L4.84939 7.77884C4.03616 7.50776 3.62955 7.37222 3.44176 7.11932C3.27777 6.89848 3.212 6.61984 3.2599 6.34898C3.31477 6.03879 3.61784 5.73572 4.22399 5.12957L4.59476 4.7588C4.82365 4.52991 4.9381 4.41546 5.07369 4.34457C5.1937 4.28183 5.3252 4.24411 5.46023 4.23371C5.61278 4.22197 5.77049 4.25836 6.0859 4.33115L13.545 6.05249C13.855 6.12401 14.01 6.15978 14.1596 6.14914C14.3041 6.13886 14.4446 6.09733 14.5714 6.02742C14.7028 5.95501 14.8134 5.84074 15.0347 5.6122L17.7448 2.81298Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    },
+    {
+        id: "schools", label: "Schools",
+        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 14.5001V11.4945C17 11.315 17 11.2253 16.9727 11.146C16.9485 11.076 16.9091 11.0122 16.8572 10.9592C16.7986 10.8993 16.7183 10.8592 16.5578 10.779L12 8.50006M4 9.50006V16.3067C4 16.6786 4 16.8645 4.05802 17.0274C4.10931 17.1713 4.1929 17.3016 4.30238 17.4082C4.42622 17.5287 4.59527 17.6062 4.93335 17.7612L11.3334 20.6945C11.5786 20.8069 11.7012 20.8631 11.8289 20.8853C11.9421 20.9049 12.0579 20.9049 12.1711 20.8853C12.2988 20.8631 12.4214 20.8069 12.6666 20.6945L19.0666 17.7612C19.4047 17.6062 19.5738 17.5287 19.6976 17.4082C19.8071 17.3016 19.8907 17.1713 19.942 17.0274C20 16.8645 20 16.6786 20 16.3067V9.50006M2 8.50006L11.6422 3.67895C11.7734 3.61336 11.839 3.58056 11.9078 3.56766C11.9687 3.55622 12.0313 3.55622 12.0922 3.56766C12.161 3.58056 12.2266 3.61336 12.3578 3.67895L22 8.50006L12.3578 13.3212C12.2266 13.3868 12.161 13.4196 12.0922 13.4325C12.0313 13.4439 11.9687 13.4439 11.9078 13.4325C11.839 13.4196 11.7734 13.3868 11.6422 13.3212L2 8.50006Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+    },
+    {
+        id: "settings", label: "Settings",
+        icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18.7273 14.7273C18.6063 15.0015 18.5702 15.3056 18.6236 15.6005C18.6771 15.8954 18.8177 16.1676 19.0273 16.3818L19.0818 16.4364C19.2509 16.6052 19.385 16.8057 19.4765 17.0265C19.568 17.2472 19.6151 17.4838 19.6151 17.7227C19.6151 17.9617 19.568 18.1983 19.4765 18.419C19.385 18.6397 19.2509 18.8402 19.0818 19.0091C18.913 19.1781 18.7124 19.3122 18.4917 19.4037C18.271 19.4952 18.0344 19.5423 17.7955 19.5423C17.5565 19.5423 17.3199 19.4952 17.0992 19.4037C16.8785 19.3122 16.678 19.1781 16.5091 19.0091L16.4545 18.9545C16.2403 18.745 15.9682 18.6044 15.6733 18.5509C15.3784 18.4974 15.0742 18.5335 14.8 18.6545C14.5311 18.7698 14.3018 18.9611 14.1403 19.205C13.9788 19.4489 13.8921 19.7347 13.8909 20.0273V20.1818C13.8909 20.664 13.6994 21.1265 13.3584 21.4675C13.0174 21.8084 12.5549 22 12.0727 22C11.5905 22 11.1281 21.8084 10.7871 21.4675C10.4461 21.1265 10.2545 20.664 10.2545 20.1818V20.1C10.2475 19.7991 10.1501 19.5073 9.97501 19.2625C9.79991 19.0176 9.55521 18.8312 9.27273 18.7273C8.99853 18.6063 8.69437 18.5702 8.39947 18.6236C8.10456 18.6771 7.83244 18.8177 7.61818 19.0273L7.56364 19.0818C7.39478 19.2509 7.19425 19.385 6.97353 19.4765C6.7528 19.568 6.51621 19.6151 6.27727 19.6151C6.03834 19.6151 5.80174 19.568 5.58102 19.4765C5.36029 19.385 5.15977 19.2509 4.99091 19.0818C4.82186 18.913 4.68775 18.7124 4.59626 18.4917C4.50476 18.271 4.45766 18.0344 4.45766 17.7955C4.45766 17.5565 4.50476 17.3199 4.59626 17.0992C4.68775 16.8785 4.82186 16.678 4.99091 16.5091L5.04545 16.4545C5.25503 16.2403 5.39562 15.9682 5.4491 15.6733C5.50257 15.3784 5.46647 15.0742 5.34545 14.8C5.23022 14.5311 5.03887 14.3018 4.79497 14.1403C4.55107 13.9788 4.26526 13.8921 3.97273 13.8909H3.81818C3.33597 13.8909 2.87351 13.6994 2.53253 13.3584C2.19156 13.0174 2 12.5549 2 12.0727C2 11.5905 2.19156 11.1281 2.53253 10.7871C2.87351 10.4461 3.33597 10.2545 3.81818 10.2545H3.9C4.2009 10.2475 4.49273 10.1501 4.73754 9.97501C4.98236 9.79991 5.16883 9.55521 5.27273 9.27273C5.39374 8.99853 5.42984 8.69437 5.37637 8.39947C5.3229 8.10456 5.18231 7.83244 4.97273 7.61818L4.91818 7.56364C4.74913 7.39478 4.61503 7.19425 4.52353 6.97353C4.43203 6.7528 4.38493 6.51621 4.38493 6.27727C4.38493 6.03834 4.43203 5.80174 4.52353 5.58102C4.61503 5.36029 4.74913 5.15977 4.91818 4.99091C5.08704 4.82186 5.28757 4.68775 5.50829 4.59626C5.72901 4.50476 5.96561 4.45766 6.20455 4.45766C6.44348 4.45766 6.68008 4.50476 6.9008 4.59626C7.12152 4.68775 7.32205 4.82186 7.49091 4.99091L7.54545 5.04545C7.75971 5.25503 8.03183 5.39562 8.32674 5.4491C8.62164 5.50257 8.9258 5.46647 9.2 5.34545H9.27273C9.54161 5.23022 9.77093 5.03887 9.93245 4.79497C10.094 4.55107 10.1807 4.26526 10.1818 3.97273V3.81818C10.1818 3.33597 10.3734 2.87351 10.7144 2.53253C11.0553 2.19156 11.5178 2 12 2C12.4822 2 12.9447 2.19156 13.2856 2.53253C13.6266 2.87351 13.8182 3.33597 13.8182 3.81818V3.9C13.8193 4.19253 13.906 4.47834 14.0676 4.72224C14.2291 4.96614 14.4584 5.15749 14.7273 5.27273C15.0015 5.39374 15.3056 5.42984 15.6005 5.37637C15.8954 5.3229 16.1676 5.18231 16.3818 4.97273L16.4364 4.91818C16.6052 4.74913 16.8057 4.61503 17.0265 4.52353C17.2472 4.43203 17.4838 4.38493 17.7227 4.38493C17.9617 4.38493 18.1983 4.43203 18.419 4.52353C18.6397 4.61503 18.8402 4.74913 19.0091 4.91818C19.1781 5.08704 19.3122 5.28757 19.4037 5.50829C19.4952 5.72901 19.5423 5.96561 19.5423 6.20455C19.5423 6.44348 19.4952 6.68008 19.4037 6.9008C19.3122 7.12152 19.1781 7.32205 19.0091 7.49091L18.9545 7.54545C18.745 7.75971 18.6044 8.03183 18.5509 8.32674C18.4974 8.62164 18.5335 8.9258 18.6545 9.2V9.27273C18.7698 9.54161 18.9611 9.77093 19.205 9.93245C19.4489 10.094 19.7347 10.1807 20.0273 10.1818H20.1818C20.664 10.1818 21.1265 10.3734 21.4675 10.7144C21.8084 11.0553 22 11.5178 22 12C22 12.4822 21.8084 12.9447 21.4675 13.2856C21.1265 13.6266 20.664 13.8182 20.1818 13.8182H20.1C19.8075 13.8193 19.5217 13.906 19.2778 14.0676C19.0339 14.2291 18.8425 14.4584 18.7273 14.7273Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    }
+];
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s: Record<string, React.CSSProperties> = {
-  root: {
-    display: "flex",
-    width: "100vw",
-    height: "100vh",
-    backgroundColor: "#111111",
-    fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-    overflow: "hidden",
-    color: "#fff",
-  },
-  sidebar: {
-    backgroundColor: "#151515",
-    borderRight: "1px solid rgba(255,255,255,0.06)",
-    display: "flex",
-    flexDirection: "column",
-    padding: "20px 12px",
-    flexShrink: 0,
-    transition: "width 0.2s ease",
-    overflow: "hidden",
-  },
-  logo: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 32,
-    paddingLeft: 4,
-  },
-  logoText: { fontSize: 32, fontWeight: 800, letterSpacing: 2, color: "#fff" },
-  collapseBtn: {
-    width: 40, height: 40, padding: 8, borderRadius: 12,
-    backgroundColor: "transparent", border: "none", cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  nav: { display: "flex", flexDirection: "column", gap: 4 },
-  navItem: {
-    display: "flex", alignItems: "center", gap: 10, padding: "9px 10px",
-    borderRadius: 8, border: "none", backgroundColor: "transparent",
-    cursor: "pointer", width: "100%", textAlign: "left",
-  },
-  navItemActive: { backgroundColor: "rgba(255,255,255,0.08)" },
-  main: {
-    flex: 1, display: "flex", flexDirection: "column",
-    overflow: "hidden", backgroundColor: "#121211",
-  },
-  topBar: {
-    display: "flex",
-    height: 48,
-    padding: "0 32px",
-    justifyContent: "space-between",
-    alignItems: "center",
-    flexShrink: 0,
-    backgroundColor: "#121211",
-  },
-  pageTitle: {
-    fontSize: 40, fontWeight: 700, color: "#fff",
-    margin: 0, letterSpacing: "-0.8px", lineHeight: "120%", flexShrink: 0,
-  },
-  searchWrap: {
-    display: "flex", width: 280, height: 40, padding: "0 16px",
-    alignItems: "center", gap: 8, borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.12)", backgroundColor: "#1a1a1a",
-    position: "absolute", left: "50%", transform: "translateX(-50%)",
-  },
-  searchInput: {
-    flex: 1, backgroundColor: "transparent", border: "none", outline: "none",
-    color: "rgba(255,255,255,0.7)", fontSize: 14, fontFamily: "inherit",
-  },
-  searchBtn: {
-    backgroundColor: "transparent", border: "none", cursor: "pointer",
-    padding: 0, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-  },
-  content: {
-    flex: 1, overflowY: "auto", padding: "32px",
-    display: "flex", flexDirection: "column", gap: 48, alignItems: "flex-start",
-  },
-  section: { width: "100%" },
-  sectionTitle: {
-    fontSize: 28, fontWeight: 700, color: "#fff",
-    margin: "0 0 16px 0", letterSpacing: "-0.5px",
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 16,
-  },
-  createBtn: {
-    position: "absolute", bottom: 28, right: 28,
-    width: 52, height: 52, borderRadius: 16,
-    backgroundColor: "#E9FD97", border: "none", cursor: "pointer",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    boxShadow: "0 4px 20px rgba(233,253,151,0.3)",
-  },
-  // Modal
-  modalBackdrop: {
-    position: "fixed", inset: 0,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    backdropFilter: "blur(6px)",
-    display: "flex", alignItems: "center", justifyContent: "center",
-    zIndex: 1000,
-  },
-  modalBox: {
-    position: "relative", width: "66vw", height: "66vh",
-    backgroundColor: "#1a1a1a", borderRadius: 20,
-    overflow: "hidden", display: "flex", flexDirection: "column",
-    padding: 28, gap: 20,
-  },
-  modalClose: {
-    position: "absolute", top: 16, right: 16,
-    width: 32, height: 32, borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    border: "none", cursor: "pointer", display: "grid", placeItems: "center", zIndex: 1,
-  },
-  modalTitle: {
-    fontSize: 24, fontWeight: 700, color: "#fff",
-    margin: 0, letterSpacing: "-0.4px", flexShrink: 0,
-  },
-  modalBody: { display: "flex", gap: 28, flex: 1, overflow: "hidden", minHeight: 0 },
-  modalLeft: { display: "flex", flexDirection: "column", gap: 16, width: "48%", flexShrink: 0 },
-  modalImage: { width: "100%", flex: 1, objectFit: "cover", borderRadius: 12, minHeight: 0 },
-  modalActions: { display: "flex", gap: 10, flexShrink: 0 },
-  modalBtnSecondary: {
-    flex: 1, height: 40, display: "flex", alignItems: "center",
-    justifyContent: "center", gap: 8,
-    backgroundColor: "rgba(255,255,255,0.08)", border: "none",
-    borderRadius: 10, color: "#fff", fontSize: 14, fontWeight: 500,
-    cursor: "pointer", fontFamily: "inherit",
-  },
-  modalBtnPrimary: {
-    flex: 1, height: 40, display: "flex", alignItems: "center",
-    justifyContent: "center", gap: 8,
-    backgroundColor: "#E9FD97", border: "none",
-    borderRadius: 10, color: "#313C01", fontSize: 14, fontWeight: 600,
-    cursor: "pointer", fontFamily: "inherit",
-  },
-  modalRight: { flex: 1, display: "flex", flexDirection: "column", gap: 20, overflowY: "auto" },
-  modalSectionTitle: {
-    fontSize: 16, fontWeight: 700, color: "#fff",
-    margin: "0 0 8px 0", letterSpacing: "-0.2px",
-  },
-  modalDescription: {
-    fontSize: 14, color: "rgba(255,255,255,0.65)",
-    lineHeight: "160%", margin: 0,
-  },
-  roleBadge: {
-    display: "inline-flex", alignItems: "center", gap: 6,
-    backgroundColor: "rgba(233,253,151,0.12)",
-    color: "#E9FD97", fontSize: 13, fontWeight: 600,
-    padding: "6px 12px", borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  statCard: {
-    flex: 1, backgroundColor: "rgba(255,255,255,0.05)",
-    borderRadius: 10, padding: "12px 16px",
-    display: "flex", flexDirection: "column", gap: 2,
-  },
-  statNum: { fontSize: 24, fontWeight: 700, color: "#E9FD97" },
-  statLabel: { fontSize: 12, color: "rgba(255,255,255,0.4)" },
-  memberRow: { display: "flex", alignItems: "center", gap: 10 },
-  memberAvatar: {
-    width: 32, height: 32, borderRadius: "50%",
-    backgroundColor: "#2a2a2a", flexShrink: 0,
-    display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-  },
+    root: {
+        display: "flex",       // sidebar и main встают рядом горизонтально
+        width: "100vw",        // занимает весь экран по ширине
+        height: "100vh",       // занимает весь экран по высоте
+        overflow: "hidden",    // убирает глобальный скролл страницы
+        backgroundColor: "#121211",
+    },
+    worldMap: {
+        position: "absolute",
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        pointerEvents: "none",
+        opacity: 0.4,
+    },
+    sidebar: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 32,
+        alignSelf: "stretch",
+        padding: 32,
+        borderRight: "1px solid #787971",
+        backgroundColor: "#121211",
+        zIndex: 1,
+    },
+    logo: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 48,
+        fontWeight: 800,
+        letterSpacing: 2,
+        color: "#ffffff",
+        pointerEvents: "none",
+        WebkitUserSelect: "none",
+        msUserSelect: "none",
+        userSelect: "none",
+    },
+    nav: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 4
+    },
+    navItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        padding: "9px 10px",
+        borderRadius: 8,
+        border: "none",
+        backgroundColor: "transparent",
+        cursor: "pointer",
+        width: "100%",
+        textAlign: "left",
+    },
+    navItemActive: {
+        backgroundColor: "rgba(255,255,255,0.08)"
+    },
+
+    main: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        alignSelf: "stretch",
+        padding: 32,
+    },
+    
 };
 
 export default SchoolsPage;
