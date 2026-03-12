@@ -15,6 +15,14 @@ interface SchoolMedia {
     order: number | null;
 }
 
+type SchoolMemberRole = "OWNER" | "INSTRUCTOR" | "STUDENT";
+
+interface SchoolMember {
+    id: string;
+    role: SchoolMemberRole;
+    user: { id: string; name: string | null; surname: string | null; avatar: string | null; email: string };
+}
+
 interface SchoolsResponse {
     items: School[];
     total: number;
@@ -36,6 +44,11 @@ interface School {
     _count: { members: number; cockpits: number };
 }
 
+interface SchoolDetail extends School {
+    members: SchoolMember[];
+    currentUserRole: SchoolMemberRole | null;
+}
+
 interface CurrentUser {
     id: string;
     name: string | null;
@@ -43,6 +56,146 @@ interface CurrentUser {
     role: string;
     avatar: string | null;
 }
+
+// ─── SchoolCard ───────────────────────────────────────────────────────────────
+
+interface CardProps {
+    school: School;
+    onPreview: () => void;
+}
+
+const SchoolCard: React.FC<CardProps> = ({ school, onPreview }) => {
+    const photo = school.media.find(m => m.type === "PHOTO");
+
+    return (
+        <div style={card.wrapper}>
+            <div style={{ ...card.imgBg, backgroundImage: photo ? `url(${photo.link})` : undefined }}>
+                <div style={card.overlay} />
+
+                <button style={card.cardExpandBtn} onClick={onPreview}>
+                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 10L21 3M21 3H15M21 3V9M10 14L3 21M3 21H9M3 21L3 15" stroke="#313C01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </button>
+                <div style={card.stats}>
+                    <div style={card.tag}>
+                        <span style={card.statItem}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 21V19C22 17.1362 20.7252 15.5701 19 15.126M15.5 3.29076C16.9659 3.88415 18 5.32131 18 7C18 8.67869 16.9659 10.1159 15.5 10.7092M17 21C17 19.1362 17 18.2044 16.6955 17.4693C16.2895 16.4892 15.5108 15.7105 14.5307 15.3045C13.7956 15 12.8638 15 11 15H8C6.13623 15 5.20435 15 4.46927 15.3045C3.48915 15.7105 2.71046 16.4892 2.30448 17.4693C2 18.2044 2 19.1362 2 21M13.5 7C13.5 9.20914 11.7091 11 9.5 11C7.29086 11 5.5 9.20914 5.5 7C5.5 4.79086 7.29086 3 9.5 3C11.7091 3 13.5 4.79086 13.5 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                            <div style={{ color: "rgba(255,255,255,1)" }}>{school._count.members}</div>
+                        </span>
+                    </div>
+                    <div style={card.tag}>
+                        <span style={card.statItem}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.7448 2.81298C18.7095 1.8165 20.3036 1.80361 21.2843 2.78436C22.2382 3.73823 22.2559 5.27921 21.3243 6.25481L18.5456 9.16457C18.3278 9.39265 18.219 9.50668 18.1518 9.64024C18.0924 9.75847 18.0571 9.88732 18.0478 10.0193C18.0374 10.1684 18.0728 10.3221 18.1438 10.6293L19.8717 18.1169C19.9444 18.4323 19.9808 18.59 19.9691 18.7426C19.9587 18.8776 19.921 19.0091 19.8582 19.1291C19.7873 19.2647 19.6729 19.3792 19.444 19.608L19.0732 19.9788C18.4671 20.585 18.164 20.888 17.8538 20.9429C17.583 20.9908 17.3043 20.925 17.0835 20.761C16.8306 20.5733 16.695 20.1666 16.424 19.3534L14.4142 13.3241L11.0689 16.6695C10.8692 16.8691 10.7694 16.969 10.7026 17.0866C10.6434 17.1907 10.6034 17.3047 10.5846 17.423C10.5633 17.5565 10.5789 17.6968 10.61 17.9775L10.7937 19.6309C10.8249 19.9116 10.8405 20.0519 10.8192 20.1854C10.8004 20.3037 10.7604 20.4177 10.7012 20.5219C10.6344 20.6394 10.5346 20.7393 10.3349 20.939L10.1374 21.1365C9.66434 21.6095 9.42781 21.8461 9.16496 21.9146C8.93442 21.9746 8.68999 21.9504 8.47571 21.8463C8.2314 21.7276 8.04585 21.4493 7.67475 20.8926L6.10643 18.5401C6.04013 18.4407 6.00698 18.391 5.96849 18.3459C5.9343 18.3058 5.89701 18.2685 5.85694 18.2343C5.81184 18.1958 5.76212 18.1627 5.66267 18.0964L3.31018 16.5281C2.75354 16.157 2.47521 15.9714 2.35649 15.7271C2.25236 15.5128 2.22816 15.2684 2.28824 15.0378C2.35674 14.775 2.59327 14.5385 3.06633 14.0654L3.26384 13.8679C3.46352 13.6682 3.56337 13.5684 3.68095 13.5016C3.78511 13.4424 3.89906 13.4024 4.01736 13.3836C4.15089 13.3623 4.29123 13.3779 4.5719 13.4091L6.22529 13.5928C6.50596 13.6239 6.6463 13.6395 6.77983 13.6182C6.89813 13.5994 7.01208 13.5594 7.11624 13.5002C7.23382 13.4334 7.33366 13.3336 7.53335 13.1339L10.8787 9.7886L4.84939 7.77884C4.03616 7.50776 3.62955 7.37222 3.44176 7.11932C3.27777 6.89848 3.212 6.61984 3.2599 6.34898C3.31477 6.03879 3.61784 5.73572 4.22399 5.12957L4.59476 4.7588C4.82365 4.52991 4.9381 4.41546 5.07369 4.34457C5.1937 4.28183 5.3252 4.24411 5.46023 4.23371C5.61278 4.22197 5.77049 4.25836 6.0859 4.33115L13.545 6.05249C13.855 6.12401 14.01 6.15978 14.1596 6.14914C14.3041 6.13886 14.4446 6.09733 14.5714 6.02742C14.7028 5.95501 14.8134 5.84074 15.0347 5.6122L17.7448 2.81298Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                            <div style={{ color: "rgba(255,255,255,1)" }}>{school._count.cockpits}</div>
+                        </span>
+                    </div>
+                </div>
+
+                <div style={card.bottom}>
+                    <div style={card.bottomRow}>
+                        <span style={card.name}>{school.name}</span>
+                    </div>
+
+                    {school.address && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 13C13.6569 13 15 11.6569 15 10C15 8.34315 13.6569 7 12 7C10.3431 7 9 8.34315 9 10C9 11.6569 10.3431 13 12 13Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M12 22C16 18 20 14.4183 20 10C20 5.58172 16.4183 2 12 2C7.58172 2 4 5.58172 4 10C4 14.4183 8 18 12 22Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                            <span style={card.address}>{school.address}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const card: Record<string, React.CSSProperties> = {
+    wrapper: {
+        borderRadius: 16,
+        overflow: "hidden",
+        cursor: "pointer",
+    },
+    imgBg: {
+        position: "relative",
+        height: 256,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundColor: "#2a2a2a",
+        display: "flex",
+        flexDirection: "column",
+        padding: 16,
+    },
+
+    overlay: {
+        position: "absolute",
+        inset: 0,
+        background: "linear-gradient(to bottom, rgba(25,25,25,0.1) 20%, rgba(25, 25, 25, 0.95) 100%)",
+        pointerEvents: "none",
+    },
+    cardExpandBtn: {
+        position: "absolute",
+        bottom: 16,
+        right: 16,
+        width: 40,
+        height: 40,
+        padding: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: 16,
+        border: "1px solid #E9FD97",
+        backgroundColor: "#E9FD97",
+        cursor: "pointer",
+        flexShrink: 0,
+    },
+    bottom: {
+        position: "relative",
+        zIndex: 1,
+        marginTop: "auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+    },
+    bottomRow: {
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "space-between",
+    },
+    name: {
+        color: "#fff",
+        fontSize: 20,
+        fontWeight: 600,
+        letterSpacing: 0.2,
+    },
+    tag: {
+        padding: "8px 16px",
+        background: " #464743",
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    stats: {
+        display: "flex",
+        gap: 12,
+        alignItems: "center",
+    },
+    statItem: {
+        display: "flex",
+        alignItems: "center",
+        gap: 5,
+        color: "#E9FD97",
+        fontSize: 20,
+        fontWeight: 400,
+        lineHeight: "100%",
+    },
+    address: {
+        color: "rgba(255,255,255,0.7)",
+        fontSize: 16,
+    }
+};
 
 // ─── SchoolsPage ──────────────────────────────────────────────────────────────
 
@@ -59,6 +212,11 @@ const SchoolsPage: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+
+    const [previewSchool, setPreviewSchool] = useState<SchoolDetail | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [modalMounted, setModalMounted] = useState(false);
+    const [modalVisible, setModalVisible] = useState(false);
 
     // ─── Auth ─────────────────────────────────────────────────────────────────
 
@@ -108,6 +266,19 @@ const SchoolsPage: React.FC = () => {
             // Backend will ideally support ?mySchools=true — for now show all as available
             setMySchools([]);
         } catch { }
+    };
+
+    const openPreview = async (schoolId: string) => {
+        setPreviewLoading(true);
+        setPreviewSchool(null);
+        setModalMounted(true);
+        setTimeout(() => setModalVisible(true), 10);
+        try {
+            const { data } = await api.get<SchoolDetail>(`/school/${schoolId}`);
+            setPreviewSchool(data);
+        } catch { } finally {
+            setPreviewLoading(false);
+        }
     };
 
     // ─── Nav ──────────────────────────────────────────────────────────────────
@@ -204,11 +375,54 @@ const SchoolsPage: React.FC = () => {
                             <div style={s.userName}>{displayName}</div>
                         </div>
                     </div>
-
-
                 </header>
+
+                {/* Schools */}
+                <div style={s.content}>
+                    {/* My schools */}
+                    {mySchools.length > 0 && (
+                        <section style={{ ...s.section, alignSelf: "stretch" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
+                                <h2 style={s.sectionTitle}>My schools</h2>
+                            </div>
+                            <div style={s.grid}>
+                                {mySchools.map(school => (
+                                    <SchoolCard key={school.id} school={school} onPreview={() => openPreview(school.id)} />
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+
+                    {/* All schools */}
+                    <section style={{ ...s.section, alignSelf: "stretch" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
+                            <h2 style={s.sectionTitle}>All schools</h2>
+                        </div>
+                        {loading ? (
+                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>Loading...</div>
+                        ) : schools.length === 0 ? (
+                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>No schools found</div>
+                        ) : (
+                            <div style={s.grid}>
+                                {schools.map(school => (
+                                    <SchoolCard key={school.id} school={school} onPreview={() => openPreview(school.id)} />
+                                ))}
+                            </div>
+                        )}
+                    </section>
+                </div>
+
+                {/* Floating create button */}
+                <button style={s.createBtn} onClick={() => navigate("/schools/create")}>
+                    <svg style={{ transform: "scale(2)" }} width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="#313C01" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
             </main>
-            {/* Schools */}
+
+            {/* Preview Modal */}
+            {/* TODO */}
         </div>
     );
 }
@@ -275,7 +489,6 @@ const s: Record<string, React.CSSProperties> = {
     navItemActive: {
         backgroundColor: "rgba(255,255,255,0.08)"
     },
-
     main: {
         display: "flex",
         flexDirection: "column",
@@ -295,7 +508,7 @@ const s: Record<string, React.CSSProperties> = {
         alignSelf: "stretch",
         backgroundColor: "#121211",
         padding: "32px 32px",
-        borderBottom: "1px solid #787971",
+        // borderBottom: "1px solid #787971",
     },
     pageTitle: {
         fontSize: 40,
@@ -358,7 +571,50 @@ const s: Record<string, React.CSSProperties> = {
         lineHeight: "140%",
         alignSelf: "stretch",
     },
-
+    content: {
+        display: "flex",
+        width: "100%",
+        height: "100%",
+        padding: "0px 32px",
+    },
+    section: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: 12,
+        alignSelf: "stretch",
+        width: "100%"
+    },
+    sectionTitle: {
+        fontSize: 32,
+        fontWeight: 400,
+        fontStyle: "normal",
+        lineHeight: "120%",
+        color: "#FFFFFF",
+        alignSelf: "stretch",
+        margin: 0,
+    },
+    grid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 16,
+        width: "100%"
+    },
+    createBtn: {
+        position: "absolute",
+        bottom: 28,
+        right: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 22,
+        backgroundColor: " #E9FD97",
+        border: "none",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 0px 20px rgba(233,253,151,0.9)",
+    },
 };
 
 export default SchoolsPage;
