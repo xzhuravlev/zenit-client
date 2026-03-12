@@ -332,7 +332,6 @@ const SchoolsPage: React.FC = () => {
     return (
         <div style={s.root}>
             <style>{`
-                * { box-sizing: border-box; }
                 .modal-backdrop { transition: opacity 0.3s ease; }
                 .modal-backdrop.hidden { opacity: 0; pointer-events: none; }
                 .modal-backdrop.visible { opacity: 1; }
