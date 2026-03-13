@@ -186,23 +186,24 @@ const card: Record<string, React.CSSProperties> = {
     },
     tag: {
         padding: "8px 16px",
-        background: " #464743",
+        background: "rgba(70, 71, 67, 0.9)",
+        backdropFilter: "blur(2px)",
         borderRadius: 8,
         justifyContent: "center",
         alignItems: "center",
     },
     stats: {
         display: "flex",
-        gap: 12,
+        gap: 20,
         alignItems: "center",
     },
     statItem: {
         display: "flex",
         alignItems: "center",
-        gap: 5,
+        gap: 10,
         color: "#E9FD97",
         fontSize: 20,
-        fontWeight: 400,
+        fontWeight: 600,
         lineHeight: "100%",
     },
     address: {
