@@ -62,8 +62,6 @@ interface SchoolCockpit {
     media: { link: string; type: string }[];
 }
 
-
-
 interface CurrentUser {
     id: string;
     name: string | null;
