@@ -382,19 +382,6 @@ const SchoolsPage: React.FC = () => {
                 <header style={s.topBar}>
                     <h1 style={s.pageTitle}>Schools</h1>
 
-                    <label style={s.searchWrap}>
-                        <input
-                            style={s.searchInput}
-                            placeholder="Search for schools..."
-                            value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            onKeyDown={e => e.key === "Enter" && fetchSchools(1)}
-                        />
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#E9FD97" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
-                    </label>
-
                     <div style={s.userInfo}>
                         <div style={s.userAvatar}>
                             {currentUser?.avatar ? (
@@ -431,7 +418,22 @@ const SchoolsPage: React.FC = () => {
                     {/* All schools */}
                     <section style={{ ...s.section, alignSelf: "stretch" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
-                            <h2 style={s.sectionTitle}>All schools</h2>
+                            <div style={s.allSchoolsHeader}>
+                                <h2 style={s.sectionTitle}>All schools</h2>
+
+                                <label style={s.searchWrap}>
+                                    <input
+                                        style={s.searchInput}
+                                        placeholder="Search for schools..."
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        onKeyDown={e => e.key === "Enter" && fetchSchools(1)}
+                                    />
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#E9FD97" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    </svg>
+                                </label>
+                            </div>
                         </div>
                         {loading ? (
                             <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>Loading...</div>
@@ -572,7 +574,7 @@ const SchoolsPage: React.FC = () => {
                                                             )}
                                                             {previewSchool.email && (
                                                                 <div style={s.contactRow}>
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 7L10.1649 12.7154C10.8261 13.1783 11.1567 13.4097 11.5163 13.4993C11.8339 13.5785 12.1661 13.5785 12.4837 13.4993C12.8433 13.4097 13.1739 13.1783 13.8351 12.7154L22 7M6.8 20H17.2C18.8802 20 19.7202 20 20.362 19.673C20.9265 19.3854 21.3854 18.9265 21.673 18.362C22 17.7202 22 16.8802 22 15.2V8.8C22 7.11984 22 6.27976 21.673 5.63803C21.3854 5.07354 20.9265 4.6146 20.362 4.32698C19.7202 4 18.8802 4 17.2 4H6.8C5.11984 4 4.27976 4 3.63803 4.32698C3.07354 4.6146 2.6146 5.07354 2.32698 5.63803C2 6.27976 2 7.11984 2 8.8V15.2C2 16.8802 2 17.7202 2.32698 18.362C2.6146 18.9265 3.07354 19.3854 3.63803 19.673C4.27976 20 5.11984 20 6.8 20Z" stroke="#E9FD97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 7L10.1649 12.7154C10.8261 13.1783 11.1567 13.4097 11.5163 13.4993C11.8339 13.5785 12.1661 13.5785 12.4837 13.4993C12.8433 13.4097 13.1739 13.1783 13.8351 12.7154L22 7M6.8 20H17.2C18.8802 20 19.7202 20 20.362 19.673C20.9265 19.3854 21.3854 18.9265 21.673 18.362C22 17.7202 22 16.8802 22 15.2V8.8C22 7.11984 22 6.27976 21.673 5.63803C21.3854 5.07354 20.9265 4.6146 20.362 4.32698C19.7202 4 18.8802 4 17.2 4H6.8C5.11984 4 4.27976 4 3.63803 4.32698C3.07354 4.6146 2.6146 5.07354 2.32698 5.63803C2 6.27976 2 7.11984 2 8.8V15.2C2 16.8802 2 17.7202 2.32698 18.362C2.6146 18.9265 3.07354 19.3854 3.63803 19.673C4.27976 20 5.11984 20 6.8 20Z" stroke="#E9FD97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                                                                     <span style={s.contactText}>{previewSchool.email}</span>
                                                                 </div>
                                                             )}
@@ -584,7 +586,7 @@ const SchoolsPage: React.FC = () => {
                                                             )}
                                                             {previewSchool.website && (
                                                                 <div style={s.contactRow}>
-                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.7076 18.3639L11.2933 19.7781C9.34072 21.7308 6.1749 21.7308 4.22228 19.7781C2.26966 17.8255 2.26966 14.6597 4.22228 12.7071L5.63649 11.2929M18.3644 12.7071L19.7786 11.2929C21.7312 9.34024 21.7312 6.17441 19.7786 4.22179C17.826 2.26917 14.6602 2.26917 12.7076 4.22179L11.2933 5.636M8.50045 15.4999L15.5005 8.49994" stroke="#E9FD97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12.7076 18.3639L11.2933 19.7781C9.34072 21.7308 6.1749 21.7308 4.22228 19.7781C2.26966 17.8255 2.26966 14.6597 4.22228 12.7071L5.63649 11.2929M18.3644 12.7071L19.7786 11.2929C21.7312 9.34024 21.7312 6.17441 19.7786 4.22179C17.826 2.26917 14.6602 2.26917 12.7076 4.22179L11.2933 5.636M8.50045 15.4999L15.5005 8.49994" stroke="#E9FD97" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
                                                                     <a href={previewSchool.website} target="_blank" rel="noopener noreferrer" style={{ ...s.contactText, color: "#E9FD97", textDecoration: "none" }}>{previewSchool.website}</a>
                                                                 </div>
                                                             )}
@@ -759,6 +761,9 @@ const s: Record<string, React.CSSProperties> = {
         border: "1px solid #787971",
         backgroundColor: "#121211",
         cursor: "text",
+        position: "absolute",   // ← добавить
+        left: "50%",            // ← добавить
+        transform: "translateX(-50%)",  // ← добавить
     },
     searchInput: {
         flex: 1,
@@ -802,7 +807,7 @@ const s: Record<string, React.CSSProperties> = {
     },
     content: {
         display: "flex",
-        width: "100%",
+        alignSelf: "stretch",   // ← вместо width: "100%"
         height: "100%",
         padding: "0px 32px",
     },
@@ -822,6 +827,13 @@ const s: Record<string, React.CSSProperties> = {
         color: "#FFFFFF",
         alignSelf: "stretch",
         margin: 0,
+    },
+    allSchoolsHeader: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: "100%",
+        position: "relative",
     },
     grid: {
         display: "grid",
