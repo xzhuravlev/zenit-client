@@ -69,30 +69,55 @@ const AppLayout: React.FC = () => {
                 </div>
 
                 <nav style={s.nav}>
-                    {navItems.map(item => (
-                        <button
-                            key={item.id}
-                            style={{
-                                ...s.navItem,
-                                ...(activeNav === item.id ? s.navItemActive : {}),
-                                justifyContent: sidebarCollapsed ? "center" : "flex-start",
-                            }}
-                            onClick={() => navigate(`/${item.id}`)}
-                        >
-                            <span style={{
-                                width: 32, height: 32, borderRadius: 12,
-                                backgroundColor: activeNav === item.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
-                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                                color: activeNav === item.id ? "#E9FD97" : "rgba(255,255,255,0.45)",
-                            }}>{item.icon}</span>
-                            {!sidebarCollapsed && (
-                                <span style={{ color: activeNav === item.id ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 18 }}>
-                                    {item.label}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                    {navItems
+                        .filter(item => item.id !== "settings")
+                        .map(item => (
+                            <button
+                                key={item.id}
+                                style={{
+                                    ...s.navItem,
+                                    ...(activeNav === item.id ? s.navItemActive : {}),
+                                    justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                                }}
+                                onClick={() => navigate(`/${item.id}`)}
+                            >
+                                <span style={{
+                                    width: 32, height: 32, borderRadius: 12,
+                                    backgroundColor: activeNav === item.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
+                                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                                    color: activeNav === item.id ? "#E9FD97" : "rgba(255,255,255,0.45)",
+                                }}>{item.icon}</span>
+                                {!sidebarCollapsed && (
+                                    <span style={{ color: activeNav === item.id ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 18 }}>
+                                        {item.label}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
                 </nav>
+                <button
+                    style={{
+                        ...s.navItem,
+                        ...(activeNav === "settings" ? s.navItemActive : {}),
+                        justifyContent: sidebarCollapsed ? "center" : "flex-start",
+                        marginTop: "auto",
+                    }}
+                    onClick={() => navigate("/settings")}
+                >
+                    <span style={{
+                        width: 32, height: 32, borderRadius: 12,
+                        backgroundColor: activeNav === "settings" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        color: activeNav === "settings" ? "#E9FD97" : "rgba(255,255,255,0.45)",
+                    }}>
+                        {navItems.find(i => i.id === "settings")?.icon}
+                    </span>
+                    {!sidebarCollapsed && (
+                        <span style={{ color: activeNav === "settings" ? "#fff" : "rgba(255,255,255,0.45)", fontSize: 18 }}>
+                            Settings
+                        </span>
+                    )}
+                </button>
             </aside>
 
             {/* Страница рендерится сюда */}
@@ -141,6 +166,7 @@ const s: Record<string, React.CSSProperties> = {
         cursor: "pointer",
         width: "100%",
         textAlign: "left",
+        letterSpacing: 0.4,
     },
     navItemActive: {
         backgroundColor: "rgba(255,255,255,0.08)",

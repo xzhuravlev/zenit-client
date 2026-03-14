@@ -83,8 +83,8 @@ const SchoolCard: React.FC<CardProps> = ({ school, onPreview }) => {
                 <div style={card.overlay} />
 
                 <button style={card.cardExpandBtn} onClick={onPreview}>
-                    <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 10L21 3M21 3H15M21 3V9M10 14L3 21M3 21H9M3 21L3 15" stroke="#313C01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 10L21 3M21 3H15M21 3V9M10 14L3 21M3 21H9M3 21L3 15" stroke="#313C01" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
                 <div style={card.stats}>
