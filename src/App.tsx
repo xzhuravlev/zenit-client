@@ -5,6 +5,7 @@ import CockpitsPage from "./pages/CockpitsPage";
 import CreateCockpitPage from "./pages/CreateCockpitPage";
 import SchoolsPage from "./pages/SchoolsPage";
 import CreateSchoolPage from "./pages/CreateSchoolPage";
+import AppLayout from "./pages/AppLayout";
 
 export default function App() {
   return (
@@ -12,9 +13,11 @@ export default function App() {
       <Routes>
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/cockpits" element={<CockpitsPage />} />
+        <Route element={<AppLayout />}>
+          <Route path="/cockpits" element={<CockpitsPage />} />
+          <Route path="/schools" element={<SchoolsPage />} />
+        </Route>
         <Route path="/cockpits/create" element={<CreateCockpitPage />} />
-        <Route path="/schools" element={<SchoolsPage />} />
         <Route path="/schools/create" element={<CreateSchoolPage />} />
         <Route path="*" element={<AuthPage />} />
       </Routes>
