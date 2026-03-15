@@ -32,3 +32,4 @@ jobs:
           firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
           projectId: zenitcloudproject
           entryPoint: .
+          channelId: live
