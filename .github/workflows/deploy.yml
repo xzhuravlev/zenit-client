@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - production
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy zenit-backend \
+            --source ./backend \
+            --region europe-west1 \
+            --allow-unauthenticated \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
+            --set-env-vars GCS_BUCKET_NAME=zenitcloudproject.firebasestorage.app \
+            --set-env-vars PAGE_SIZE=15 \
+            --add-cloudsql-instances zenitcloudproject:europe-west1:zenit-db
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Build
+        run: cd frontend && npm run build
+        env:
+          VITE_API_URL: https://zenit-backend-991692159165.europe-west1.run.app
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: zenitcloudproject.firebaseapp.com
+          VITE_FIREBASE_PROJECT_ID: zenitcloudproject
+          VITE_FIREBASE_STORAGE_BUCKET: zenitcloudproject.firebasestorage.app
+          VITE_FIREBASE_MESSAGING_SENDER_ID: 991692159165
+          VITE_FIREBASE_APP_ID: 1:991692159165:web:18f8f78aba5f1115b65fd4
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
+          projectId: zenitcloudproject
+          entryPoint: ./frontend
