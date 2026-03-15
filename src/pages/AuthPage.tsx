@@ -204,15 +204,9 @@ export default function AuthPage() {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             const token = await result.user.getIdToken();
-            const photoURL = result.user.photoURL;
-
             await fetch(`${import.meta.env.VITE_API_URL}/auth/google`, {
                 method: "POST",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ photoURL }),
+                headers: { Authorization: `Bearer ${token}` },
             });
             window.location.href = "/cockpits"; // ← добавить это
         } catch {
