@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy Frontend
 
 on:
   push:
@@ -6,37 +6,16 @@ on:
       - production
 
 jobs:
-  deploy-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy zenit-backend \
-            --source ./backend \
-            --region europe-west1 \
-            --allow-unauthenticated \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}" \
-            --set-env-vars GCS_BUCKET_NAME=zenitcloudproject.firebasestorage.app \
-            --set-env-vars PAGE_SIZE=15 \
-            --add-cloudsql-instances zenitcloudproject:europe-west1:zenit-db
-
   deploy-frontend:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: npm ci
 
       - name: Build
-        run: cd frontend && npm run build
+        run: npm run build
         env:
           VITE_API_URL: https://zenit-backend-991692159165.europe-west1.run.app
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
@@ -52,4 +31,4 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
           projectId: zenitcloudproject
-          entryPoint: ./frontend
+          entryPoint: .
