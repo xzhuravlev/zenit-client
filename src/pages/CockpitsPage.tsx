@@ -547,7 +547,7 @@ const CockpitsPage: React.FC = () => {
                                 </svg>
                             </label>
 
-                            <div style={s.filterBtns}>
+                            {/* <div style={s.filterBtns}>
                                 <FilterDropdown
                                     label="Category"
                                     options={Object.entries(categoryLabels).map(([value, label]) => ({ value, label }))}
@@ -579,7 +579,7 @@ const CockpitsPage: React.FC = () => {
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                     </button>
                                 )}
-                            </div>
+                            </div> */}
                         </div>
 
                         {loading ? (
