@@ -83,7 +83,7 @@ const SchoolCard: React.FC<CardProps> = ({ school, onPreview }) => {
                 <div style={card.overlay} />
 
                 <button style={card.cardExpandBtn} onClick={onPreview}>
-                <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M14 10L21 3M21 3H15M21 3V9M10 14L3 21M3 21H9M3 21L3 15" stroke="#313C01" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
@@ -220,6 +220,7 @@ const SchoolsPage: React.FC = () => {
     const [mySchools, setMySchools] = useState<School[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
@@ -325,12 +326,12 @@ const SchoolsPage: React.FC = () => {
 
                 {/* Schools */}
                 <div style={s.content}>
+                    {error && <div style={{ color: "#ff6b6b", fontSize: 13, marginBottom: 16 }}>{error}</div>}
+
                     {/* My schools */}
                     {mySchools.length > 0 && (
                         <section style={{ ...s.section, alignSelf: "stretch" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
-                                <h2 style={s.sectionTitle}>My schools</h2>
-                            </div>
+                            <h2 style={s.sectionTitle}>My schools</h2>
                             <div style={s.grid}>
                                 {mySchools.map(school => (
                                     <SchoolCard key={school.id} school={school} onPreview={() => openPreview(school.id)} />
@@ -342,28 +343,26 @@ const SchoolsPage: React.FC = () => {
 
                     {/* All schools */}
                     <section style={{ ...s.section, alignSelf: "stretch" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, alignSelf: "stretch" }}>
-                            <div style={s.allSchoolsHeader}>
-                                <h2 style={s.sectionTitle}>All schools</h2>
+                        <div style={s.allSchoolsHeader}>
+                            <h2 style={s.sectionTitle}>All schools</h2>
 
-                                <label style={s.searchWrap}>
-                                    <input
-                                        style={s.searchInput}
-                                        placeholder="Search for schools..."
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        onKeyDown={e => e.key === "Enter" && fetchSchools(1)}
-                                    />
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#E9FD97" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                </label>
-                            </div>
+                            <label style={s.searchWrap}>
+                                <input
+                                    style={s.searchInput}
+                                    placeholder="Search for schools..."
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    onKeyDown={e => e.key === "Enter" && fetchSchools(1)}
+                                />
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M21 21L16.65 16.65M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#E9FD97" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                            </label>
                         </div>
                         {loading ? (
-                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>Loading...</div>
+                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "40px 0", textAlign: "center" }}>Loading...</div>
                         ) : schools.length === 0 ? (
-                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "20px 0" }}>No schools found</div>
+                            <div style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, padding: "40px 0", textAlign: "center" }}>No schools found</div>
                         ) : (
                             <div style={s.grid}>
                                 {schools.map(school => (
@@ -623,30 +622,6 @@ const s: Record<string, React.CSSProperties> = {
         lineHeight: "120%",
         letterSpacing: "0.5px",
     },
-    searchWrap: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",  // ← input слева, лупа справа
-        width: 280,
-        height: 40,
-        padding: "0 16px",
-        borderRadius: 8,
-        border: "1px solid #787971",
-        backgroundColor: "#121211",
-        cursor: "text",
-        position: "absolute",   // ← добавить
-        left: "50%",            // ← добавить
-        transform: "translateX(-50%)",  // ← добавить
-    },
-    searchInput: {
-        flex: 1,
-        backgroundColor: "transparent",
-        border: "none",
-        outline: "none",
-        color: "rgba(255,255,255,0.6)",
-        fontSize: 14,
-        fontFamily: "inherit",
-    },
     userInfo: {
         display: "flex",
         width: "300px",
@@ -701,6 +676,30 @@ const s: Record<string, React.CSSProperties> = {
         alignSelf: "stretch",
         margin: 0,
     },
+    searchWrap: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",  // ← input слева, лупа справа
+        width: 280,
+        height: 40,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid #787971",
+        backgroundColor: "#121211",
+        cursor: "text",
+        position: "absolute",   // ← добавить
+        left: "50%",            // ← добавить
+        transform: "translateX(-50%)",  // ← добавить
+    },
+    searchInput: {
+        flex: 1,
+        backgroundColor: "transparent",
+        border: "none",
+        outline: "none",
+        color: "rgba(255,255,255,0.6)",
+        fontSize: 14,
+        fontFamily: "inherit",
+    },
     allSchoolsHeader: {
         display: "flex",
         alignItems: "center",
@@ -709,6 +708,7 @@ const s: Record<string, React.CSSProperties> = {
         position: "relative",
     },
     grid: {
+        marginTop: "20px",
         display: "grid",
         gridTemplateColumns: "repeat(3, 1fr)",
         gap: 16,

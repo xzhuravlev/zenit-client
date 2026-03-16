@@ -149,6 +149,7 @@ const s: Record<string, React.CSSProperties> = {
         WebkitUserSelect: "none",
         msUserSelect: "none",
         userSelect: "none",
+        lineHeight: "1",
     },
     nav: {
         display: "flex",

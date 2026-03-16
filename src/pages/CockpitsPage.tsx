@@ -530,7 +530,7 @@ const CockpitsPage: React.FC = () => {
                     )}
 
                     {/* All cockpits */}
-                    <section style={s.section}>
+                    <section style={{ ...s.section, alignSelf: "stretch" }}>
                         <div style={s.allCockpitsHeader}>
                             <h2 style={s.sectionTitle}>All cockpits</h2>
 
@@ -764,27 +764,6 @@ const s: Record<string, React.CSSProperties> = {
         lineHeight: "120%",
         letterSpacing: "0.5px",
     },
-    searchWrap: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        width: 280,
-        height: 40,
-        padding: "0 16px",
-        borderRadius: 8,
-        border: "1px solid #787971",
-        backgroundColor: "#121211",
-        cursor: "text",
-    },
-    searchInput: {
-        flex: 1,
-        backgroundColor: "transparent",
-        border: "none",
-        outline: "none",
-        color: "rgba(255,255,255,0.6)",
-        fontSize: 14,
-        fontFamily: "inherit",
-    },
     userInfo: {
         display: "flex",
         width: "300px",
@@ -840,14 +819,32 @@ const s: Record<string, React.CSSProperties> = {
         fontStyle: "normal",
         lineHeight: "120%",
         color: "#FFFFFF",
+        alignSelf: "stretch",
         margin: 0,
     },
-    grid: {
-        marginTop: "20px",
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 16,
-        width: "100%",
+    searchWrap: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        width: 280,
+        height: 40,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid #787971",
+        backgroundColor: "#121211",
+        cursor: "text",
+        position: "absolute",   // ← добавить
+        left: "50%",            // ← добавить
+        transform: "translateX(-50%)",  // ← добавить
+    },
+    searchInput: {
+        flex: 1,
+        backgroundColor: "transparent",
+        border: "none",
+        outline: "none",
+        color: "rgba(255,255,255,0.6)",
+        fontSize: 14,
+        fontFamily: "inherit",
     },
     allCockpitsHeader: {
         display: "flex",
@@ -918,6 +915,13 @@ const s: Record<string, React.CSSProperties> = {
         color: "rgba(255,255,255,0.4)",
         fontSize: 12,
         cursor: "pointer",
+    },
+    grid: {
+        marginTop: "20px",
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 16,
+        width: "100%",
     },
     createBtn: {
         position: "absolute",
