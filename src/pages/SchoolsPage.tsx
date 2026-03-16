@@ -300,6 +300,15 @@ const SchoolsPage: React.FC = () => {
                 .modal-box { transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
                 .modal-box.hidden { opacity: 0; transform: scale(0.92) translateY(16px); }
                 .modal-box.visible { opacity: 1; transform: scale(1) translateY(0); }
+                ::-webkit-scrollbar { width: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { 
+                    background: rgba(233, 253, 151, 0.2); 
+                    border-radius: 3px; 
+                }
+                ::-webkit-scrollbar-thumb:hover { 
+                    background: rgba(233, 253, 151, 0.4); 
+                }
             `}</style>
 
             {/* Main */}
@@ -328,7 +337,7 @@ const SchoolsPage: React.FC = () => {
                 <div style={s.content}>
                     {error && <div style={{ color: "#ff6b6b", fontSize: 13, marginBottom: 16 }}>{error}</div>}
 
-                    {/* My schools */}
+                    {/* My schools
                     {mySchools.length > 0 && (
                         <section style={{ ...s.section, alignSelf: "stretch" }}>
                             <h2 style={s.sectionTitle}>My schools</h2>
@@ -338,7 +347,7 @@ const SchoolsPage: React.FC = () => {
                                 ))}
                             </div>
                         </section>
-                    )}
+                    )} */}
 
 
                     {/* All schools */}
@@ -600,6 +609,8 @@ const s: Record<string, React.CSSProperties> = {
         alignSelf: "stretch",
         gap: 48,
         flex: "1 0 0",
+        minWidth: 0,         // ← добавить
+        overflow: "hidden",  // ← добавить
         position: "relative",
         zIndex: 1,
     },
@@ -611,7 +622,6 @@ const s: Record<string, React.CSSProperties> = {
         alignSelf: "stretch",
         backgroundColor: "#121211",
         padding: "32px 32px",
-        // borderBottom: "1px solid #787971",
     },
     pageTitle: {
         fontSize: 40,
@@ -655,9 +665,13 @@ const s: Record<string, React.CSSProperties> = {
     },
     content: {
         display: "flex",
+        flexDirection: "column",
         alignSelf: "stretch",   // ← вместо width: "100%"
         height: "100%",
         padding: "0px 32px",
+        overflowY: "auto",
+        gap: 36,
+        boxSizing: "border-box", // ← добавить, чтобы padding не добавлял ширину
     },
     section: {
         display: "flex",
@@ -665,7 +679,7 @@ const s: Record<string, React.CSSProperties> = {
         alignItems: "flex-start",
         gap: 12,
         alignSelf: "stretch",
-        width: "100%"
+        width: "100%",
     },
     sectionTitle: {
         fontSize: 32,
@@ -679,7 +693,7 @@ const s: Record<string, React.CSSProperties> = {
     searchWrap: {
         display: "flex",
         alignItems: "center",
-        justifyContent: "space-between",  // ← input слева, лупа справа
+        justifyContent: "space-between",
         width: 280,
         height: 40,
         padding: "0 16px",
@@ -687,9 +701,7 @@ const s: Record<string, React.CSSProperties> = {
         border: "1px solid #787971",
         backgroundColor: "#121211",
         cursor: "text",
-        position: "absolute",   // ← добавить
-        left: "50%",            // ← добавить
-        transform: "translateX(-50%)",  // ← добавить
+        margin: "0 auto",  // центрирует внутри средней колонки
     },
     searchInput: {
         flex: 1,
@@ -701,11 +713,10 @@ const s: Record<string, React.CSSProperties> = {
         fontFamily: "inherit",
     },
     allSchoolsHeader: {
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",  // три колонки: левая, центр, правая
         alignItems: "center",
-        justifyContent: "space-between",
         width: "100%",
-        position: "relative",
     },
     grid: {
         marginTop: "20px",

@@ -483,6 +483,15 @@ const CockpitsPage: React.FC = () => {
                 .modal-box { transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
                 .modal-box.hidden { opacity: 0; transform: scale(0.92) translateY(16px); }
                 .modal-box.visible { opacity: 1; transform: scale(1) translateY(0); }
+                ::-webkit-scrollbar { width: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { 
+                    background: rgba(233, 253, 151, 0.2); 
+                    border-radius: 3px; 
+                }
+                ::-webkit-scrollbar-thumb:hover { 
+                    background: rgba(233, 253, 151, 0.4); 
+                }
             `}</style>
 
             {/* Main */}
@@ -833,9 +842,7 @@ const s: Record<string, React.CSSProperties> = {
         border: "1px solid #787971",
         backgroundColor: "#121211",
         cursor: "text",
-        position: "absolute",   // ← добавить
-        left: "50%",            // ← добавить
-        transform: "translateX(-50%)",  // ← добавить
+        margin: "0 auto",  // центрирует внутри средней колонки
     },
     searchInput: {
         flex: 1,
@@ -847,9 +854,9 @@ const s: Record<string, React.CSSProperties> = {
         fontFamily: "inherit",
     },
     allCockpitsHeader: {
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1fr auto 1fr",  // три колонки: левая, центр, правая
         alignItems: "center",
-        justifyContent: "space-between",
         width: "100%",
     },
     filterBtns: {
