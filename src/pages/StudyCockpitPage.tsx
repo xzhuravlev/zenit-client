@@ -119,8 +119,8 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
             animFrameRef.current = requestAnimationFrame(animate);
 
             // Smooth camera interpolation
-            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.08;
-            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.08;
+            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.01;
+            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.01;
 
             const { phi, theta } = spherical.current;
             camera.lookAt(new THREE.Vector3(
@@ -272,6 +272,16 @@ interface HotspotPopupProps {
 
 const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screenY, onClose }) => {
     const photo = instrument.media.find(m => m.type === "PHOTO");
+    const textMedia = instrument.media.find(m => m.type === "TEXT");
+    const [description, setDescription] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!textMedia) return;
+        fetch(textMedia.link)
+            .then(r => r.text())
+            .then(text => setDescription(text))
+            .catch(() => {});
+    }, [textMedia?.link]);
 
     // Keep popup inside viewport
     const left = Math.min(screenX + 16, window.innerWidth - 320);
@@ -283,7 +293,7 @@ const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screen
             left,
             top,
             width: 300,
-            backgroundColor: "rgba(20,20,20,0.92)",
+            backgroundColor: "rgba(20,20,20,0.85)",
             backdropFilter: "blur(12px)",
             borderRadius: 16,
             border: "1px solid rgba(255,255,255,0.1)",
@@ -292,12 +302,12 @@ const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screen
             boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
         }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{instrument.name}</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>{instrument.name}</span>
                 <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 18, padding: 0, lineHeight: 1 }}>×</button>
             </div>
-            {instrument.description && (
-                <p style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: "160%", margin: "0 0 12px 0" }}>
-                    {instrument.description}
+            {description && (
+                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)" }}>
+                    {description}
                 </p>
             )}
             {photo && (
@@ -337,11 +347,6 @@ const StudyCockpitPage: React.FC = () => {
 
     const handleHotspotClick = (instrument: Instrument, screenX: number, screenY: number) => {
         setActiveHotspot({ instrument, x: screenX, y: screenY });
-        if (instrument.xPos != null && instrument.yPos != null) {
-            const pitch = (instrument.yPos / 100) * Math.PI;
-            const yaw = ((instrument.xPos / 100) - 0.5) * 2 * Math.PI;
-            setFocusTarget({ pitch, yaw });
-        }
     };
 
     const handleInstrumentListClick = (instrument: Instrument) => {
@@ -502,7 +507,7 @@ const StudyCockpitPage: React.FC = () => {
                                                 <div style={s.instrumentDesc}>{inst.description}</div>
                                             )}
                                         </div>
-                                        {inst.pitch != null && (
+                                        {inst.xPos != null && (
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2">
                                                 <circle cx="12" cy="12" r="3" />
                                                 <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
