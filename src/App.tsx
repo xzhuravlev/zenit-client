@@ -7,6 +7,7 @@ import SchoolsPage from "./pages/SchoolsPage";
 import CreateSchoolPage from "./pages/CreateSchoolPage";
 import SettingsPage from "./pages/SettingsPage";
 import AppLayout from "./pages/AppLayout";
+import StudyCockpitPage from "./pages/StudyCockpitPage";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/schools" element={<SchoolsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
+        <Route path="/cockpits/:id/learn" element={<StudyCockpitPage />} />
         <Route path="/cockpits/create" element={<CreateCockpitPage />} />
         <Route path="/schools/create" element={<CreateSchoolPage />} />
         <Route path="*" element={<AuthPage />} />
