@@ -119,8 +119,8 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
             animFrameRef.current = requestAnimationFrame(animate);
 
             // Smooth camera interpolation
-            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.01;
-            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.01;
+            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.03;
+            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.06;
 
             const { phi, theta } = spherical.current;
             camera.lookAt(new THREE.Vector3(
@@ -222,9 +222,12 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) isDragging.current = true;
         lastMouse.current = { x: e.clientX, y: e.clientY };
         const fov = cameraRef.current?.fov ?? 75;
-        const sensitivity = (fov / 75) * 0.003;
+        const sensitivity = (fov / 75) * 0.0015;
         targetSpherical.current.theta -= dx * sensitivity;
         targetSpherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, targetSpherical.current.phi - dy * sensitivity));
+
+        spherical.current.theta = targetSpherical.current.theta;
+        spherical.current.phi = targetSpherical.current.phi;
     };
 
     const handleClick = (e: React.MouseEvent) => {
