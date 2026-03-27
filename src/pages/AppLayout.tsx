@@ -62,7 +62,7 @@ const AppLayout: React.FC = () => {
             <img src={WORLD_MAP_IMAGE} style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh", objectFit: "cover", opacity: 0.4, pointerEvents: "none", zIndex: 0 }} />
 
             {/* Sidebar */}
-            <aside style={{ ...s.sidebar, width: sidebarCollapsed ? 64 : 200 }}>
+            <aside style={{ ...s.sidebar, width: sidebarCollapsed ? 64 : 282 }}>
                 {/* logo, nav — как сейчас */}
                 <div style={s.logo}>
                     {!sidebarCollapsed && <span>ZENIT</span>}
@@ -133,7 +133,7 @@ const s: Record<string, React.CSSProperties> = {
         gap: 32,
         alignSelf: "stretch",
         padding: 32,
-        borderRight: "1px solid #787971",
+        borderRight: "1px solid #393A36",
         backgroundColor: "#121211",
         zIndex: 1,
     },

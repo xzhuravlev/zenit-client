@@ -372,12 +372,8 @@ export default function AuthPage() {
                                         onClick={handleGoogle}
                                         disabled={loading}
                                     >
-                                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ marginRight: 8 }}>
-                                            <circle cx="9" cy="9" r="8.5" stroke="#c8e26a" strokeWidth="1" />
-                                            <path d="M13 9c0-.4-.04-.78-.1-1.15H9v2.17h2.24c-.1.52-.4.96-.84 1.26v1.04h1.36C12.6 11.52 13 10.36 13 9z" fill="#c8e26a" />
-                                            <path d="M9 13.5c1.12 0 2.06-.37 2.74-1.01l-1.36-1.04c-.38.25-.86.4-1.38.4-1.06 0-1.96-.71-2.28-1.67H5.32v1.07C6 12.76 7.4 13.5 9 13.5z" fill="#c8e26a" />
-                                            <path d="M6.72 10.18A2.74 2.74 0 016.58 9c0-.41.07-.81.14-1.18V6.75H5.32A4.5 4.5 0 004.5 9c0 .73.17 1.42.82 2.25l1.4-1.07z" fill="#c8e26a" />
-                                            <path d="M9 6.15c.6 0 1.14.2 1.56.6l1.17-1.17C11.06 4.87 10.12 4.5 9 4.5 7.4 4.5 6 5.24 5.32 6.75l1.4 1.07C7.04 6.86 7.94 6.15 9 6.15z" fill="#c8e26a" />
+                                        <svg width="24" height="24" viewBox="0 0 24 24" style={{ marginRight: 8 }} fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M12 8C9.79086 8 8 9.79086 8 12C8 14.2091 9.79086 16 12 16C14.2091 16 16 14.2091 16 12C16 9.79086 14.2091 8 12 8ZM12 8H21.17M3.95 6.06L8.54 14M10.88 21.94L15.46 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                         </svg>
                                         {t.google}
                                     </button>

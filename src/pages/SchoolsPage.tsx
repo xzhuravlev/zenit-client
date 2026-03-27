@@ -84,7 +84,7 @@ const SchoolCard: React.FC<CardProps> = ({ school, onPreview }) => {
 
                 <button style={card.cardExpandBtn} onClick={onPreview}>
                     <svg width="25" height="25" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M14 10L21 3M21 3H15M21 3V9M10 14L3 21M3 21H9M3 21L3 15" stroke="#313C01" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M4 12H20M20 12L14 6M20 12L14 18" stroke="#313C01" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 </button>
                 <div style={card.stats}>
@@ -151,16 +151,17 @@ const card: Record<string, React.CSSProperties> = {
         right: 16,
         width: 40,
         height: 40,
-        padding: 8,
+        borderRadius: 16,
+        backgroundColor: "#E9FD97",
+        border: "none",
+        cursor: "pointer",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        borderRadius: 16,
-        border: "1px solid #E9FD97",
-        backgroundColor: "#E9FD97",
-        cursor: "pointer",
-        flexShrink: 0,
+        // flexShrink: 0,
         zIndex: 2,
+        padding: 0,
+
     },
     bottom: {
         position: "relative",

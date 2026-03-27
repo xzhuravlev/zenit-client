@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useOutletContext } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -25,6 +27,11 @@ const SettingsPage: React.FC = () => {
 
 
     // ─── Auth ─────────────────────────────────────────────────────────────────
+
+    const handleLogout = async () => {
+        await signOut(auth);
+        window.location.href = "/auth";
+    };
 
     // ─── Data fetching ────────────────────────────────────────────────────────
 
@@ -70,6 +77,30 @@ const SettingsPage: React.FC = () => {
 
                 {/* Settings */}
                 <div style={s.content}>
+                    <div style={s.content}>
+                        <button
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "10px 20px",
+                                borderRadius: 10,
+                                border: "1px solid rgba(255,100,100,0.2)",
+                                backgroundColor: "rgba(255,100,100,0.08)",
+                                color: "rgba(255,120,120,0.9)",
+                                fontSize: 14,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                            }}
+                            onClick={handleLogout}
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                            </svg>
+                            Sign out
+                        </button>
+                    </div>
                 </div>
 
             </main>

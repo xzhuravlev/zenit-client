@@ -46,17 +46,9 @@ interface CockpitDetail {
     name: string;
     manufacturer: string | null;
     model: string | null;
-    registration: string | null;
-    category: string | null;
-    purpose: string | null;
-    hasVfr: boolean;
-    hasIfr: boolean;
-    hasNight: boolean;
-    hasAutopilot: boolean;
     media: CockpitMedia[];
     instruments: Instrument[];
     checklists: Checklist[];
-    creator: { name: string | null; surname: string | null; avatar: string | null } | null;
 }
 
 // ─── Panorama Viewer ──────────────────────────────────────────────────────────
@@ -106,9 +98,7 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
 
         const geometry = new THREE.SphereGeometry(500, 60, 40);
         geometry.scale(-1, 1, 1);
-        const texture = new THREE.TextureLoader().load(imageUrl, () => {
-            onLoad?.();
-        });
+        const texture = new THREE.TextureLoader().load(imageUrl, () => { onLoad?.(); });
         scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ map: texture })));
 
         const hotspotGroup = new THREE.Group();
@@ -118,9 +108,8 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
         const animate = () => {
             animFrameRef.current = requestAnimationFrame(animate);
 
-            // Smooth camera interpolation
-            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.03;
-            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.06;
+            spherical.current.phi += (targetSpherical.current.phi - spherical.current.phi) * 0.08;
+            spherical.current.theta += (targetSpherical.current.theta - spherical.current.theta) * 0.08;
 
             const { phi, theta } = spherical.current;
             camera.lookAt(new THREE.Vector3(
@@ -129,7 +118,6 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
                 Math.sin(phi) * Math.sin(theta)
             ));
 
-            // Hotspot proximity opacity
             if (hotspotGroup.children.length > 0) {
                 const raycaster = new THREE.Raycaster();
                 raycaster.setFromCamera(new THREE.Vector2(mouseNDC.current.x, mouseNDC.current.y), camera);
@@ -168,19 +156,14 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
         };
     }, [imageUrl]);
 
-    // Update hotspots
     useEffect(() => {
         const group = hotspotGroupRef.current;
         if (!group) return;
         while (group.children.length) group.remove(group.children[0]);
-
         instruments.forEach(inst => {
             if (inst.xPos == null || inst.yPos == null) return;
-
-            // Пересчёт xPos/yPos → pitch/yaw
             const pitch = (inst.yPos / 100) * Math.PI;
             const yaw = ((inst.xPos / 100) - 0.5) * 2 * Math.PI;
-
             const mesh = new THREE.Mesh(
                 new THREE.SphereGeometry(4, 16, 16),
                 new THREE.MeshBasicMaterial({ color: 0xE9FD97, transparent: true, opacity: 0.5 })
@@ -196,7 +179,6 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
         });
     }, [instruments]);
 
-    // Focus camera on target
     useEffect(() => {
         if (!focusTarget) return;
         targetSpherical.current = { phi: focusTarget.pitch, theta: focusTarget.yaw };
@@ -225,7 +207,6 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
         const sensitivity = (fov / 75) * 0.0015;
         targetSpherical.current.theta -= dx * sensitivity;
         targetSpherical.current.phi = Math.max(0.1, Math.min(Math.PI - 0.1, targetSpherical.current.phi - dy * sensitivity));
-
         spherical.current.theta = targetSpherical.current.theta;
         spherical.current.phi = targetSpherical.current.phi;
     };
@@ -286,43 +267,45 @@ const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screen
             .catch(() => { });
     }, [textMedia?.link]);
 
-    // Keep popup inside viewport
     const left = Math.min(screenX + 16, window.innerWidth - 320);
     const top = Math.min(screenY - 20, window.innerHeight - 300);
 
     return (
         <div style={{
-            position: "fixed",
-            left,
-            top,
-            width: 300,
-            backgroundColor: "rgba(20,20,20,0.85)",
-            backdropFilter: "blur(12px)",
+            position: "fixed", left, top, width: 300, zIndex: 200,
+            backgroundColor: "rgba(18,18,17,0.9)",
+            backdropFilter: "blur(5px)",
+            WebkitBackdropFilter: "blur(5px)",
             borderRadius: 16,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid #393A36",
             padding: 16,
-            zIndex: 100,
-            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
         }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>{instrument.name}</span>
-                <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 18, padding: 0, lineHeight: 1 }}>×</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <span style={{ fontSize: 20, fontWeight: 400, color: "#fff" }}>{instrument.name}</span>
+                <button
+                    onClick={onClose}
+                    style={{ background: "rgba(233, 253, 151, 0.18)", border: "none", cursor: "pointer", color: "#E9FD97", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
             </div>
             {description && (
-                <p style={{ fontSize: 14, color: "rgba(255,255,255,0.65)" }}>
+                <p style={{ fontSize: 16, fontWeight: 400, color: "rgba(255,255,255,0.7)", margin: "0 0 10px 0", lineHeight: "150%" }}>
                     {description}
                 </p>
             )}
             {photo && (
-                <img src={photo.link} alt={instrument.name} style={{ width: "100%", borderRadius: 10, objectFit: "cover", maxHeight: 160 }} />
+                <img src={photo.link} alt={instrument.name} style={{ width: "100%", borderRadius: 8, objectFit: "cover", maxHeight: 160 }} />
             )}
         </div>
     );
 };
 
-// ─── StudyCockpitPage ─────────────────────────────────────────────────────────
+// ─── StudyCockpit ─────────────────────────────────────────────────────────────
 
-const StudyCockpitPage: React.FC = () => {
+const StudyCockpit: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
@@ -331,28 +314,22 @@ const StudyCockpitPage: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<StudyTab>("instruments");
 
-    // Hotspot popup
     const [activeHotspot, setActiveHotspot] = useState<{ instrument: Instrument; x: number; y: number } | null>(null);
-
-    // Camera focus
     const [focusTarget, setFocusTarget] = useState<{ pitch: number; yaw: number } | null>(null);
+    const [expandedChecklists, setExpandedChecklists] = useState<Set<string>>(new Set());
 
     useEffect(() => {
         if (!id) return;
         api.get<CockpitDetail>(`/cockpits/${id}`)
             .then(({ data }) => setCockpit(data))
-            .catch(() => navigate("/cockpits"))
+            .catch(() => navigate("/new/cockpits"))
             .finally(() => setLoading(false));
     }, [id]);
 
     const panorama = cockpit?.media.find(m => m.type === "PANORAMA");
     const preview = cockpit?.media.find(m => m.type === "PREVIEW") || cockpit?.media[0];
 
-    const handleHotspotClick = (instrument: Instrument, screenX: number, screenY: number) => {
-        setActiveHotspot({ instrument, x: screenX, y: screenY });
-    };
-
-    const handleInstrumentListClick = (instrument: Instrument) => {
+    const handleInstrumentClick = (instrument: Instrument) => {
         if (instrument.xPos != null && instrument.yPos != null) {
             const pitch = (instrument.yPos / 100) * Math.PI;
             const yaw = ((instrument.xPos / 100) - 0.5) * 2 * Math.PI;
@@ -362,19 +339,12 @@ const StudyCockpitPage: React.FC = () => {
     };
 
     if (loading) return (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", backgroundColor: "#111", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#121211", color: "rgba(255,255,255,0.3)", fontFamily: "'DM Sans', sans-serif" }}>
             Loading...
         </div>
     );
 
     if (!cockpit) return null;
-
-    const tags = [
-        cockpit.hasVfr && "VFR",
-        cockpit.hasIfr && "IFR",
-        cockpit.hasNight && "Night",
-        cockpit.hasAutopilot && "Autopilot",
-    ].filter(Boolean) as string[];
 
     return (
         <div style={s.root}>
@@ -387,17 +357,12 @@ const StudyCockpitPage: React.FC = () => {
                 button:hover { opacity: 0.85; }
             `}</style>
 
-            {/* Panorama — full screen background */}
-            <div style={s.panoramaWrap}>
-                {!panoramaLoaded && (
-                    <div style={s.skeleton}>
-                        <style>{`
-                            @keyframes shimmer {
-                                0% { transform: translateY(-100%); }
-                                100% { transform: translateY(100%); }
-                            }
-                        `}</style>
-                        <div style={s.shimmer} />
+            {/* Panorama background */}
+            <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+                {!panoramaLoaded && panorama && (
+                    <div style={{ position: "absolute", inset: 0, backgroundColor: "#121211", overflow: "hidden", zIndex: 1 }}>
+                        <style>{`@keyframes shimmer { 0% { transform: translateY(-100%); } 100% { transform: translateY(100%); } }`}</style>
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)", animation: "shimmer 2s infinite" }} />
                     </div>
                 )}
                 {panorama ? (
@@ -405,7 +370,7 @@ const StudyCockpitPage: React.FC = () => {
                         imageUrl={panorama.link}
                         instruments={cockpit.instruments}
                         focusTarget={focusTarget}
-                        onHotspotClick={handleHotspotClick}
+                        onHotspotClick={(inst, x, y) => setActiveHotspot({ instrument: inst, x, y })}
                         onDismiss={() => setActiveHotspot(null)}
                         onLoad={() => setPanoramaLoaded(true)}
                     />
@@ -416,18 +381,18 @@ const StudyCockpitPage: React.FC = () => {
                 )}
             </div>
 
-            {/* Top bar */}
-            <div style={s.topBar}>
-                <button style={s.backBtn} onClick={() => navigate(-1)}>
-                    <svg width="25" height="25" viewBox="0 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <span style={s.topBarTitle}>{cockpit.name}</span>
-            </div>
-
             {/* Floating side panel */}
             <div style={s.panel}>
+                {/* Panel header */}
+                <div style={s.panelHeader}>
+                    <span style={s.panelTitle}>{cockpit.name}</span>
+                    <button style={s.closeBtn} onClick={() => navigate("/new/cockpits")}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+
                 {/* Tabs */}
                 <div style={s.tabs}>
                     {(["instruments", "checklists"] as StudyTab[]).map(tab => (
@@ -444,9 +409,9 @@ const StudyCockpitPage: React.FC = () => {
                 {/* Panel content */}
                 <div style={s.panelContent}>
 
-                    {/* ── INSTRUMENTS TAB ── */}
+                    {/* ── INSTRUMENTS ── */}
                     {activeTab === "instruments" && (
-                        <div style={s.listTab}>
+                        <div style={s.list}>
                             {cockpit.instruments.length === 0 ? (
                                 <p style={s.emptyText}>No instruments added</p>
                             ) : (
@@ -454,17 +419,17 @@ const StudyCockpitPage: React.FC = () => {
                                     <button
                                         key={inst.id}
                                         style={s.instrumentRow}
-                                        onClick={() => handleInstrumentListClick(inst)}
+                                        onClick={() => handleInstrumentClick(inst)}
                                     >
                                         <div style={s.instrumentNum}>{i + 1}</div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
                                             <div style={s.instrumentName}>{inst.name}</div>
                                             {inst.description && (
                                                 <div style={s.instrumentDesc}>{inst.description}</div>
                                             )}
                                         </div>
                                         {inst.xPos != null && (
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round">
                                                 <circle cx="12" cy="12" r="3" />
                                                 <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
                                             </svg>
@@ -475,39 +440,61 @@ const StudyCockpitPage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* ── CHECKLISTS TAB ── */}
+                    {/* ── CHECKLISTS ── */}
                     {activeTab === "checklists" && (
-                        <div style={s.listTab}>
+                        <div style={s.list}>
                             {cockpit.checklists.length === 0 ? (
                                 <p style={s.emptyText}>No checklists available</p>
                             ) : (
-                                cockpit.checklists.map(cl => (
+                                cockpit.checklists.map(cl => {
+                                    const isExpanded = expandedChecklists.has(cl.id);
+                                    const toggle = () => setExpandedChecklists(prev => {
+                                        const next = new Set(prev);
+                                        isExpanded ? next.delete(cl.id) : next.add(cl.id);
+                                        return next;
+                                    });
+                                    return (
                                     <div key={cl.id} style={s.checklistBlock}>
-                                        <h3 style={s.checklistName}>{cl.name}</h3>
-                                        <div style={s.checklistItems}>
-                                            {cl.items.sort((a, b) => a.order - b.order).map((item, idx) => (
+                                        <div style={{ ...s.checklistHeader, cursor: "pointer" }} onClick={toggle}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, color: isExpanded ? "#E9FD97" : "rgba(255,255,255,0.4)" }}>
+                                                    <path d="M20 12.5V6.8C20 5.11984 20 4.27976 19.673 3.63803C19.3854 3.07354 18.9265 2.6146 18.362 2.32698C17.7202 2 16.8802 2 15.2 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H12M14 11H8M10 15H8M16 7H8M14.5 19L16.5 21L21 16.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                                <div style={s.checklistName}>{cl.name}</div>
+                                            </div>
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, color: "rgba(255,255,255,0.5)", transition: "transform 0.2s", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+                                                <path d="M6 9L12 15L18 9" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        </div>
+                                        {isExpanded && <div style={s.checklistItems}>
+                                            {[...cl.items].sort((a, b) => a.order - b.order).map((item) => (
                                                 <div key={item.id} style={s.checklistItem}>
-                                                    <div style={s.checklistStep}>{idx + 1}</div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div style={s.checklistDesc}>{item.description}</div>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
                                                         {item.instrument && (
-                                                            <button
-                                                                style={s.checklistInstrumentBtn}
-                                                                onClick={() => item.instrument && handleInstrumentListClick(item.instrument)}
-                                                            >
-                                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                                                    <circle cx="12" cy="12" r="3" />
-                                                                    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-                                                                </svg>
-                                                                {item.instrument.name}
-                                                            </button>
+                                                            <div style={s.checklistInstrumentName}>{item.instrument.name}</div>
                                                         )}
+                                                        <div style={s.checklistDesc}>{item.description}</div>
                                                     </div>
+                                                    {item.instrument && (
+                                                        <button
+                                                            style={s.checklistLocateBtn}
+                                                            onClick={() => {
+                                                                if (!item.instrument) return;
+                                                                const full = cockpit.instruments.find(i => i.id === item.instrument!.id);
+                                                                if (full) handleInstrumentClick(full);
+                                                            }}
+                                                        >
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                                                <circle cx="12" cy="12" r="3" />
+                                                                <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
                                                 </div>
                                             ))}
-                                        </div>
+                                        </div>}
                                     </div>
-                                ))
+                                );})
                             )}
                         </div>
                     )}
@@ -531,110 +518,85 @@ const StudyCockpitPage: React.FC = () => {
 
 const s: Record<string, React.CSSProperties> = {
     root: {
-        position: "relative",
-        width: "100vw",
-        height: "100vh",
-        backgroundColor: "#111",
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "#121211",
         fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
         overflow: "hidden",
         color: "#fff",
     },
-    panoramaWrap: {
-        position: "absolute",
-        inset: 0,
-        zIndex: 0,
-    },
-    skeleton: {
-        position: "absolute",
-        inset: 0,
-        backgroundColor: "#1a1a1a",
-        overflow: "hidden",
-        zIndex: 1,
-    },
-    shimmer: {
-        position: "absolute",
-        inset: 0,
-        background: "linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)",
-        animation: "shimmer 2s infinite",
-        backgroundSize: "100% 200%",
-    },
-    topBar: {
-        position: "absolute",
-        top: 20,
-        left: 20,
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        zIndex: 10,
-    },
-    backBtn: {
-        display: "flex",
-        width: 40,
-        height: 40,
-        padding: 0,
-        justifyContent: "center",
-        alignItems: "center",
-
-        borderRadius: 8,
-        backgroundColor: "rgba(233, 253, 151, 0.18)",
-        backdropFilter: "blur(3px)",
-        border: "none",
-
-        color: "#E9FD97",
-    },
-    topBarTitle: {
-        fontSize: 18,
-        fontWeight: 700,
-        color: "#fff",
-        textShadow: "0 1px 8px rgba(0,0,0,0.8)",
-        letterSpacing: "-0.3px",
-    },
     panel: {
         position: "absolute",
-        top: 20,
-        right: 20,
-        bottom: 20,
-        width: 400,
-        backgroundColor: "rgba(15,15,15,0.75)",
-        backdropFilter: "blur(20px)",
-        borderRadius: 20,
-        border: "1px solid rgba(255,255,255,0.08)",
+        top: 32,
+        right: 32,
+        bottom: 32,
+        width: 412,
+        backgroundColor: "rgba(18,18,17,0.90)",
+        backdropFilter: "blur(5px)",
+        WebkitBackdropFilter: "blur(5px)",
+        borderRadius: 16,
+        border: "1px solid #393A36",
         display: "flex",
         flexDirection: "column",
         zIndex: 10,
         overflow: "hidden",
     },
+    panelHeader: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 16,
+    },
+    panelTitle: {
+        fontSize: 24,
+        fontWeight: 400,
+        color: "#fff",
+    },
+    closeBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 8,
+        background: "rgba(233, 253, 151, 0.18)",
+        border: "none",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+        padding: 8,
+    },
     tabs: {
         display: "flex",
-        padding: "12px 12px 0",
-        gap: 4,
+        padding: "14px 16px",
+        gap: 12,
         flexShrink: 0,
     },
     tab: {
         flex: 1,
-        padding: "8px 4px",
-        borderRadius: 10,
+        padding: "12px",
+        borderRadius: 8,
         border: "none",
         backgroundColor: "transparent",
-        color: "rgba(255,255,255,0.4)",
-        fontSize: 13,
-        fontWeight: 500,
+        color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: 400,
         cursor: "pointer",
     },
     tabActive: {
-        backgroundColor: "rgba(255,255,255,0.1)",
-        color: "#fff",
+        border: "none",
+        backgroundColor: "#444444",
+        color: "#E9FD97",
+        fontWeight: 400,
     },
     panelContent: {
         flex: 1,
         overflowY: "auto",
         padding: 16,
     },
-    // Instruments & Checklists shared
-    listTab: {
+    list: {
         display: "flex",
         flexDirection: "column",
-        gap: 6,
+        gap: 12,
     },
     emptyText: {
         color: "rgba(255,255,255,0.3)",
@@ -646,31 +608,29 @@ const s: Record<string, React.CSSProperties> = {
     instrumentRow: {
         display: "flex",
         alignItems: "center",
-        gap: 10,
+        gap: 16,
         padding: "10px 12px",
-        borderRadius: 10,
-        backgroundColor: "rgba(255,255,255,0.05)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        borderRadius: 8,
+        background: "rgba(255,255,255,0.05)",
         cursor: "pointer",
         width: "100%",
-        textAlign: "left",
     },
     instrumentNum: {
-        width: 24,
-        height: 24,
+        width: 32,
+        height: 32,
         borderRadius: 6,
-        backgroundColor: "rgba(233,253,151,0.12)",
+        backgroundColor: "rgba(233,253,151,0.15)",
         color: "#E9FD97",
-        fontSize: 12,
-        fontWeight: 700,
+        fontSize: 16,
+        fontWeight: 600,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         flexShrink: 0,
     },
     instrumentName: {
-        fontSize: 13,
-        fontWeight: 600,
+        fontSize: 16,
+        fontWeight: 400,
         color: "#fff",
     },
     instrumentDesc: {
@@ -681,61 +641,66 @@ const s: Record<string, React.CSSProperties> = {
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
     },
-    // Checklists
     checklistBlock: {
-        backgroundColor: "rgba(255,255,255,0.04)",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 8,
+        background: "rgba(255,255,255,0.05)",
+        borderRadius: 8,
+        padding: "12px 14px",
+        marginBottom: 6,
+        display: "flex",
+        flexDirection: "column",
+        gap: 6,
+    },
+    checklistHeader: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
     },
     checklistName: {
-        fontSize: 14,
-        fontWeight: 700,
-        color: "#E9FD97",
-        margin: "0 0 10px 0",
+        fontSize: 20,
+        fontWeight: 400,
+        color: "#fff",
     },
     checklistItems: {
         display: "flex",
         flexDirection: "column",
-        gap: 8,
+        gap: 12,
+        marginTop: 8,
     },
     checklistItem: {
         display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
+        alignItems: "center",
+        gap: 8,
+        padding: "10px 12px",
+        borderRadius: 8,
+        background: "rgba(233,253,151,0.18)",
     },
-    checklistStep: {
-        width: 20,
-        height: 20,
-        borderRadius: 5,
-        backgroundColor: "rgba(255,255,255,0.1)",
-        color: "rgba(255,255,255,0.5)",
-        fontSize: 11,
-        fontWeight: 700,
+    checklistInstrumentName: {
+        fontSize: 16,
+        fontWeight: 600,
+        color: "#fff",
+        marginBottom: 2,
+    },
+    checklistDesc: {
+        fontSize: 14,
+        fontWeight: 400,
+        color: "rgba(255,255,255,0.6)",
+        lineHeight: "140%",
+    },
+    checklistLocateBtn: {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        flexShrink: 0,
-        marginTop: 1,
-    },
-    checklistDesc: {
-        fontSize: 13,
-        color: "rgba(255,255,255,0.8)",
-        lineHeight: "150%",
-    },
-    checklistInstrumentBtn: {
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        marginTop: 4,
-        backgroundColor: "rgba(255,255,255,0.07)",
+        width: 40,
+        height: 40,
+        borderRadius: 8,
         border: "none",
-        borderRadius: 5,
-        color: "rgba(255,255,255,0.5)",
-        fontSize: 11,
-        padding: "3px 7px",
+        backgroundColor: "rgba(233,253,151,0.18)",
+        color: "#E9FD97",
         cursor: "pointer",
+        flexShrink: 0,
+        padding: 0,
     },
 };
 
-export default StudyCockpitPage;
+export default StudyCockpit;
