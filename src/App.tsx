@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AuthPage from "./pages/AuthPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
-import SchoolsPage from "./pages/SchoolsPage";
+import Schools from "./pages/Schools";
 import CreateSchoolPage from "./pages/CreateSchoolPage";
 import SettingsPage from "./pages/SettingsPage";
 import ContentLayout from "./pages/ContentLayout";
@@ -19,7 +19,7 @@ export default function App() {
 
         <Route element={<ContentLayout />}>
           <Route path="/cockpits" element={<Cockpits />} />
-          <Route path="/schools" element={<SchoolsPage />} />
+          <Route path="/schools" element={<Schools />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
