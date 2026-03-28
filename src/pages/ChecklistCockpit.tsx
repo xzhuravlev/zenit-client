@@ -18,21 +18,19 @@ interface ChecklistItem {
     id: string;
     description: string;
     order: number;
-    instrument: { id: string; name: string } | null;
+    instrumentId: string;
 }
 
-interface Checklist {
+interface ChecklistDetail {
     id: string;
     name: string;
     items: ChecklistItem[];
-}
-
-interface CockpitDetail {
-    id: string;
-    name: string;
-    media: { id: string; link: string; type: string }[];
-    instruments: Instrument[];
-    checklists: Checklist[];
+    cockpit: {
+        id: string;
+        name: string;
+        media: { id: string; link: string; type: string }[];
+        instruments: Instrument[];
+    };
 }
 
 // ─── Panorama Viewer ──────────────────────────────────────────────────────────
@@ -234,35 +232,30 @@ const PanoramaViewer: React.FC<PanoramaProps> = ({
 // ─── ChecklistCockpit ─────────────────────────────────────────────────────────
 
 const ChecklistCockpit: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    const { checklistId } = useParams<{ cockpitId: string; checklistId: string }>();
     const navigate = useNavigate();
 
-    const [cockpit, setCockpit] = useState<CockpitDetail | null>(null);
+    const [checklist, setChecklist] = useState<ChecklistDetail | null>(null);
     const [panoramaLoaded, setPanoramaLoaded] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const [selectedChecklistId, setSelectedChecklistId] = useState<string | null>(null);
     const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
     // stepId → instrumentId
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [submitted, setSubmitted] = useState(false);
+    const [result, setResult] = useState<{ attempt: number; percent: number } | null>(null);
     const [focusTarget, setFocusTarget] = useState<{ pitch: number; yaw: number } | null>(null);
 
     useEffect(() => {
-        if (!id) return;
-        api.get<CockpitDetail>(`/cockpits/${id}`)
-            .then(({ data }) => {
-                setCockpit(data);
-                if (data.checklists.length > 0) setSelectedChecklistId(data.checklists[0].id);
-            })
-            .catch(() => navigate("/new/cockpits"))
+        if (!checklistId) return;
+        api.get<ChecklistDetail>(`/checklists/${checklistId}`)
+            .then(({ data }) => { console.log(data); setChecklist(data); })
+            .catch(() => navigate("/cockpits"))
             .finally(() => setLoading(false));
-    }, [id]);
+    }, [checklistId]);
 
-    const panorama = cockpit?.media.find(m => m.type === "PANORAMA");
-    const preview = cockpit?.media.find(m => m.type === "PREVIEW") || cockpit?.media[0];
-
-    const checklist = cockpit?.checklists.find(cl => cl.id === selectedChecklistId) ?? null;
+    const panorama = checklist?.cockpit.media[0];
+    const instruments = checklist?.cockpit.instruments ?? [];
     const steps = checklist ? [...checklist.items].sort((a, b) => a.order - b.order) : [];
 
     const handleStepClick = (stepId: string) => {
@@ -274,7 +267,6 @@ const ChecklistCockpit: React.FC = () => {
         if (!selectedStepId || submitted) return;
         setAnswers(prev => ({ ...prev, [selectedStepId]: instrument.id }));
         setSelectedStepId(null);
-        // Focus camera on the instrument
         if (instrument.xPos != null && instrument.yPos != null) {
             setFocusTarget({
                 pitch: (instrument.yPos / 100) * Math.PI,
@@ -284,32 +276,35 @@ const ChecklistCockpit: React.FC = () => {
     };
 
     const clearAnswer = (stepId: string) => {
-        setAnswers(prev => {
-            const next = { ...prev };
-            delete next[stepId];
-            return next;
-        });
+        setAnswers(prev => { const next = { ...prev }; delete next[stepId]; return next; });
     };
 
     const allAnswered = steps.length > 0 && steps.every(s => answers[s.id]);
 
-    const score = submitted
-        ? steps.filter(s => {
-            const correctId = s.instrument?.id;
-            return correctId && answers[s.id] === correctId;
-        }).length
-        : 0;
+    const handleSubmit = async () => {
+        if (!checklistId || !allAnswered) return;
+        // Send instrumentIds in step order
+        const selectedInstrumentIds = steps.map(s => answers[s.id]);
+        console.log("SUBMIT:");
+        console.log(selectedInstrumentIds);
+        const { data } = await api.post<{ attempt: number; percent: number }>(
+            `/checklists/${checklistId}/complete`,
+            { selectedInstrumentIds }
+        );
+        setResult(data);
+        setSubmitted(true);
+    };
 
     const handleReset = () => {
         setAnswers({});
         setSubmitted(false);
+        setResult(null);
         setSelectedStepId(null);
     };
 
     const getStepResult = (step: ChecklistItem): "correct" | "wrong" | null => {
         if (!submitted) return null;
-        if (!step.instrument) return null;
-        return answers[step.id] === step.instrument.id ? "correct" : "wrong";
+        return answers[step.id] === step.instrumentId ? "correct" : "wrong";
     };
 
     if (loading) return (
@@ -318,7 +313,7 @@ const ChecklistCockpit: React.FC = () => {
         </div>
     );
 
-    if (!cockpit) return null;
+    if (!checklist) return null;
 
     return (
         <div style={s.root}>
@@ -342,15 +337,13 @@ const ChecklistCockpit: React.FC = () => {
                 {panorama ? (
                     <PanoramaViewer
                         imageUrl={panorama.link}
-                        instruments={cockpit.instruments}
+                        instruments={instruments}
                         assignedInstrumentIds={new Set(Object.values(answers))}
                         awaitingAssignment={!!selectedStepId && !submitted}
                         focusTarget={focusTarget}
                         onHotspotClick={handleHotspotClick}
                         onLoad={() => setPanoramaLoaded(true)}
                     />
-                ) : preview ? (
-                    <img src={preview.link} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 ) : (
                     <div style={{ width: "100%", height: "100%", backgroundColor: "#1a1a1a" }} />
                 )}
@@ -371,50 +364,33 @@ const ChecklistCockpit: React.FC = () => {
             <div style={s.panel}>
                 {/* Header */}
                 <div style={s.panelHeader}>
-                    <span style={s.panelTitle}>{cockpit.name}</span>
-                    <button style={s.closeBtn} onClick={() => navigate("/new/cockpits")}>
+                    <span style={s.panelTitle}>{checklist.cockpit.name}</span>
+                    <button style={s.closeBtn} onClick={() => navigate("/cockpits")}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M18 6L6 18M6 6L18 18" />
                         </svg>
                     </button>
                 </div>
 
-                {/* Checklist selector */}
-                {cockpit.checklists.length > 1 && (
-                    <div style={s.clSelector}>
-                        {cockpit.checklists.map(cl => (
-                            <button
-                                key={cl.id}
-                                style={{ ...s.clTab, ...(selectedChecklistId === cl.id ? s.clTabActive : {}) }}
-                                onClick={() => { setSelectedChecklistId(cl.id); handleReset(); }}
-                            >
-                                {cl.name}
-                            </button>
-                        ))}
-                    </div>
-                )}
-
-                {/* Checklist name (single) */}
-                {cockpit.checklists.length === 1 && checklist && (
-                    <div style={s.clTitle}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 12.5V6.8C20 5.11984 20 4.27976 19.673 3.63803C19.3854 3.07354 18.9265 2.6146 18.362 2.32698C17.7202 2 16.8802 2 15.2 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H12M14 11H8M10 15H8M16 7H8M14.5 19L16.5 21L21 16.5" />
-                        </svg>
-                        {checklist.name}
-                    </div>
-                )}
+                {/* Checklist name */}
+                <div style={s.clTitle}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 12.5V6.8C20 5.11984 20 4.27976 19.673 3.63803C19.3854 3.07354 18.9265 2.6146 18.362 2.32698C17.7202 2 16.8802 2 15.2 2H8.8C7.11984 2 6.27976 2 5.63803 2.32698C5.07354 2.6146 4.6146 3.07354 4.32698 3.63803C4 4.27976 4 5.11984 4 6.8V17.2C4 18.8802 4 19.7202 4.32698 20.362C4.6146 20.9265 5.07354 21.3854 5.63803 21.673C6.27976 22 7.11984 22 8.8 22H12M14 11H8M10 15H8M16 7H8M14.5 19L16.5 21L21 16.5" />
+                    </svg>
+                    {checklist.name}
+                </div>
 
                 {/* Steps */}
                 <div style={s.panelContent}>
-                    {cockpit.checklists.length === 0 ? (
-                        <p style={s.emptyText}>No checklists available</p>
+                    {steps.length === 0 ? (
+                        <p style={s.emptyText}>No steps in this checklist</p>
                     ) : (
                         <div style={s.stepList}>
                             {steps.map((step, idx) => {
                                 const result = getStepResult(step);
                                 const isSelected = selectedStepId === step.id;
                                 const assignedInst = answers[step.id]
-                                    ? cockpit.instruments.find(i => i.id === answers[step.id])
+                                    ? instruments.find(i => i.id === answers[step.id])
                                     : null;
 
                                 return (
@@ -480,14 +456,14 @@ const ChecklistCockpit: React.FC = () => {
                         <button
                             style={{ ...s.submitBtn, ...(!allAnswered ? s.submitBtnDisabled : {}) }}
                             disabled={!allAnswered}
-                            onClick={() => setSubmitted(true)}
+                            onClick={handleSubmit}
                         >
                             Submit answers
                         </button>
                     ) : (
                         <div style={s.resultRow}>
                             <div style={s.scoreText}>
-                                {score} / {steps.length} correct
+                                {result?.percent ?? 0}% correct
                             </div>
                             <button style={s.retryBtn} onClick={handleReset}>
                                 Try again

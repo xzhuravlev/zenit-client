@@ -45,6 +45,7 @@ interface CockpitDetail extends Cockpit {
         id: string;
         name: string;
         items: { id: string; description: string; order: number }[];
+        progresses: { percent: number; attempt: number }[];
     }[];
     creator: { id: string; name: string | null; surname: string | null; avatar: string | null } | null;
 }
@@ -220,7 +221,7 @@ const CockpitCard: React.FC<CardProps> = ({ cockpit, onOpen }) => {
                         </div>
                     </div>
 
-                    <button style={s.openBtn} onClick={e => { e.stopPropagation(); if (cockpit) navigate(`/new/cockpits/${cockpit.id}/learn`); }}>
+                    <button style={s.openBtn} onClick={e => { e.stopPropagation(); if (cockpit) navigate(`/cockpits/${cockpit.id}/learn`); }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M20 14V16.8C20 17.9201 20 18.4802 19.782 18.908C19.5903 19.2843 19.2843 19.5903 18.908 19.782C18.4802 20 17.9201 20 16.8 20H14M10 4H7.2C6.0799 4 5.51984 4 5.09202 4.21799C4.71569 4.40973 4.40973 4.71569 4.21799 5.09202C4 5.51984 4 6.07989 4 7.2V10M15 9L21 3M21 3H15M21 3V9M9 15L3 21M3 21H9M3 21L3 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -518,18 +519,19 @@ const Cockpits: React.FC = () => {
                                         <span style={s.modalSectionTitle}>Checklists</span>
                                         <div style={s.checklistList}>
                                             {(detail?.checklists ?? []).map(cl => {
-                                                const pct = 0; // placeholder
-                                                const attempts = 0; // placeholder
-                                                const color = pct <= 20 ? "#C00F0C" : pct <= 50 ? "#E8B931" : "#008043";
+                                                const progress = cl.progresses[0] ?? null;
+                                                const pct = progress?.percent ?? 0;
+                                                const attempts = progress?.attempt ?? 0;
+                                                const color = pct === 0 ? "rgba(255,255,255,0.25)" : pct < 20 ? "#C00F0C" : pct < 50 ? "#E8B931" : "#008043";
                                                 return (
-                                                    <div key={cl.id} style={{ ...s.checklistRow, cursor: "pointer" }} onClick={() => navigate(`/new/cockpits/${selected?.id}/checklist`)}>
+                                                    <div key={cl.id} style={{ ...s.checklistRow, cursor: "pointer" }} onClick={() => navigate(`/cockpits/${selected?.id}/checklist/${cl.id}`)}>
                                                         <span style={s.checklistName}>{cl.name}</span>
                                                         <div style={s.checklistDivider} />
                                                         <span style={{ ...s.checklistPct, color }}>{pct}%</span>
                                                         <div style={{ ...s.progressTrack, background: `${color}40` }}>
                                                             <div style={{ ...s.progressFill, width: `${pct}%`, background: color }} />
                                                         </div>
-                                                        <span style={s.checklistAttempts}>{attempts} tries</span>
+                                                        <span style={s.checklistAttempts}>{attempts > 0 ? `${attempts} ${attempts === 1 ? "try" : "tries"}` : "—"}</span>
                                                     </div>
                                                 );
                                             })}

@@ -322,7 +322,7 @@ const StudyCockpit: React.FC = () => {
         if (!id) return;
         api.get<CockpitDetail>(`/cockpits/${id}`)
             .then(({ data }) => setCockpit(data))
-            .catch(() => navigate("/new/cockpits"))
+            .catch(() => navigate("/cockpits"))
             .finally(() => setLoading(false));
     }, [id]);
 
@@ -386,7 +386,7 @@ const StudyCockpit: React.FC = () => {
                 {/* Panel header */}
                 <div style={s.panelHeader}>
                     <span style={s.panelTitle}>{cockpit.name}</span>
-                    <button style={s.closeBtn} onClick={() => navigate("/new/cockpits")}>
+                    <button style={s.closeBtn} onClick={() => navigate("/cockpits")}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M18 6L6 18M6 6L18 18" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

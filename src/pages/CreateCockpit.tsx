@@ -473,7 +473,7 @@ const CreateCockpit: React.FC = () => {
                 checklists: checklistsPayload.length > 0 ? checklistsPayload : undefined,
             });
 
-            navigate("/new/cockpits");
+            navigate("/cockpits");
         } catch (err: any) {
             setError(err?.response?.data?.message || "Error creating cockpit");
         } finally {
@@ -555,7 +555,7 @@ const CreateCockpit: React.FC = () => {
                 {/* Header */}
                 <div style={s.panelHeader}>
                     <span style={s.panelTitle}>New cockpit</span>
-                    <button style={s.closeBtn} onClick={() => navigate("/new/cockpits")}>
+                    <button style={s.closeBtn} onClick={() => navigate("/cockpits")}>
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                             <path d="M18 6L6 18M6 6L18 18" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
@@ -847,7 +847,7 @@ const CreateCockpit: React.FC = () => {
                     {error && <div style={s.errorMsg}>{error}</div>}
                     <div style={s.footerRow}>
                         {step === 1 ? (
-                            <button style={s.cancelBtn} onClick={() => navigate("/new/cockpits")}>
+                            <button style={s.cancelBtn} onClick={() => navigate("/cockpits")}>
                                 Cancel
                             </button>
                         ) : (
