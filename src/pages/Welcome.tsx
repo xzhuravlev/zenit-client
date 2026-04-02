@@ -1,1223 +1,227 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase/firebase";
 
-// ─── Asset URLs (Figma node 377:1989) ───────────────────────────────────────
-const imgZenitLogo       = "https://www.figma.com/api/mcp/asset/901b9253-ddf1-4232-b200-840d795e0f97";
-const imgFlyBeyond       = "https://www.figma.com/api/mcp/asset/3d96fec5-a04b-4866-b281-3903ffc474be";
-const imgArrowRightHero  = "https://www.figma.com/api/mcp/asset/fc24f43a-cd16-4d65-96a1-a76ec3fc77e4";
-const imgArrowRightBrand = "https://www.figma.com/api/mcp/asset/e47a7952-fdf9-4059-962c-ebaa37cd184a";
-const imgAppRightPanel   = "https://www.figma.com/api/mcp/asset/e114d841-07ad-464d-8c8a-6bad49d67564";
-const imgIconSchool      = "https://www.figma.com/api/mcp/asset/e51835fd-f5eb-48ac-a807-c3485ed43f82";
-const imgIconCrown       = "https://www.figma.com/api/mcp/asset/f30ee8f5-fb6e-47a6-ba1d-28197476c14b";
-const imgIconTravel      = "https://www.figma.com/api/mcp/asset/06e4231e-a394-46e8-bfd5-b81e2448d829";
-const imgIconVilla       = "https://www.figma.com/api/mcp/asset/3636ce32-c6ff-4f96-b1d6-18f9ec40f077";
-const imgRolesPlaceholder= "https://www.figma.com/api/mcp/asset/9789597a-5ac9-417e-87b7-5f77408a2d13";
-const imgPricingDivider  = "https://www.figma.com/api/mcp/asset/838ccbfe-7132-48d6-a4d6-462891c56a46";
-const imgPricingDividerF = "https://www.figma.com/api/mcp/asset/7bf04000-79c2-4adb-8844-321444fbb50a";
-const imgPricingArrow    = "https://www.figma.com/api/mcp/asset/8225f1fe-d590-4c62-b95e-e18319653444";
-const imgPricingArrowF   = "https://www.figma.com/api/mcp/asset/534c70c0-2563-4df7-afb1-58dd7c93bd52";
-const imgFlightSchoolPic = "https://www.figma.com/api/mcp/asset/70b09d57-b288-4029-b425-0da886ae291f";
-const imgVoucherIcon     = "https://www.figma.com/api/mcp/asset/2b4abfa9-4a59-4d9c-9cad-990e0692c74c";
-const imgCtaIcon         = "https://www.figma.com/api/mcp/asset/0f6dcc3b-2a84-4ccd-8461-31f3fe5f45a4";
-const imgFooterLogo      = "https://www.figma.com/api/mcp/asset/09aa5b01-f950-42ca-b665-7098d4855ae4";
-const imgFooterFlyBeyond = "https://www.figma.com/api/mcp/asset/dbe01ce6-5672-4b5f-95fa-4f22152830a3";
-const imgFooterX         = "https://www.figma.com/api/mcp/asset/917525b8-f726-413a-8b49-f4625bd036bb";
-const imgFooterInstagram = "https://www.figma.com/api/mcp/asset/b97bae0e-3754-4a61-b46c-1886f7e3771f";
-const imgFooterYoutube   = "https://www.figma.com/api/mcp/asset/1715528b-aea0-44e1-b658-ef198cc3c9e3";
-const imgFooterLinkedin  = "https://www.figma.com/api/mcp/asset/23d31302-cfea-4bb3-b682-d18f8ef36761";
+const Welcome: React.FC = () => {
+    const navigate = useNavigate();
+    const [authChecked, setAuthChecked] = useState(false);
 
-// ─── Design tokens (from Figma) ──────────────────────────────────────────────
-const C = {
-  bgDefault:   "#121211",
-  bgSecondary: "#1a1a19",
-  bgCard:      "rgba(26,26,25,0.8)",
-  bgActive:    "#272725",
-  bgBrandSec:  "rgba(233,253,151,0.18)",
-  accent:      "#e9fd97",
-  accentText:  "#313c01",
-  borderCard:  "#7b7b74",
-  borderNeutral: "#393a36",
-  borderBrand: "#e9fd97",
-  textPrimary: "#ffffff",
-  textSecondary: "rgba(255,255,255,0.7)",
-  textTertiary: "rgba(255,255,255,0.4)",
-  textNeutral: "#e3e3e3",
-} as const;
+    useEffect(() => {
+        const unsub = onAuthStateChanged(auth, (user) => {
+            if (user) navigate("/cockpits", { replace: true });
+            else setAuthChecked(true);
+        });
+        return unsub;
+    }, []);
 
-// ─── Sub-components ──────────────────────────────────────────────────────────
+    if (!authChecked) return null;
 
-function BtnPrimary({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <button style={{ ...s.btnPrimary, ...style }}>
-      {children}
-    </button>
-  );
-}
-
-function BtnBrandSecondary({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <button style={{ ...s.btnBrandSec, ...style }}>
-      {children}
-    </button>
-  );
-}
-
-function BtnSubtle({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <button style={{ ...s.btnSubtle, ...style }}>
-      {children}
-    </button>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
-export default function Welcome() {
-  return (
-    <div style={s.page}>
-
-      {/* ═══ NAVBAR ═══════════════════════════════════════════════════════════ */}
-      <nav style={s.nav}>
-        <div style={s.navInner}>
-          {/* Logo */}
-          <div style={s.navBrand}>
-            <img src={imgZenitLogo} alt="ZENIT" style={s.navLogoImg} />
-            <img src={imgFlyBeyond} alt="fly beyond" style={s.navTaglineImg} />
-          </div>
-
-          {/* Nav links */}
-          <div style={s.navLinks}>
-            {["How it works", "Why it matters", "Who ZENIT is built for", "Roles and features", "Pricing"].map((label) => (
-              <a key={label} href={`#${label.toLowerCase().replace(/\s+/g, "-")}`} style={s.navLink}>
-                {label}
-              </a>
-            ))}
-          </div>
-
-          {/* Auth buttons */}
-          <div style={s.navActions}>
-            <BtnSubtle>Sign up</BtnSubtle>
-            <BtnBrandSecondary>Log in</BtnBrandSecondary>
-          </div>
-        </div>
-      </nav>
-
-      {/* ═══ HERO ═════════════════════════════════════════════════════════════ */}
-      <section style={s.hero}>
-        <div style={s.heroText}>
-          <h1 style={s.heroHeading}>
-            <span style={{ display: "block" }}>Master your cockpit.</span>
-            <span style={{ display: "block" }}>Anywhere, anytime.</span>
-          </h1>
-          <p style={s.heroSub}>
-            Turn your everyday device into an interactive cockpit trainer for
-            safer, more confident flights in any aircraft you fly.
-          </p>
-          <div style={s.heroCtas}>
-            <BtnPrimary>
-              Start training as a pilot
-              <img src={imgArrowRightHero} alt="" style={s.btnIcon} />
-            </BtnPrimary>
-            <BtnBrandSecondary>For flight schools</BtnBrandSecondary>
-          </div>
-        </div>
-        <div style={s.heroAppWrap}>
-          <img src={imgAppRightPanel} alt="ZENIT app" style={s.heroAppImg} />
-        </div>
-      </section>
-
-      {/* ═══ BENEFITS ═════════════════════════════════════════════════════════ */}
-      <section style={s.section}>
-        <div style={s.inner}>
-          <div style={s.benefitsGrid}>
-            {[
-              {
-                title: "Train real cockpit flows",
-                body: "Practice the exact sequence of switches and controls in the cockpit layout you actually fly.\nNo guessing and no paper diagrams.",
-              },
-              {
-                title: "Build true muscle memory",
-                body: "Practice the exact sequence of switches and controls in the cockpit layout you actually fly.\nNo guessing and no paper diagrams.",
-              },
-              {
-                title: "Reduce training costs",
-                body: "Move a large part of your cockpit practice from the air to the ground.\nRepeat flows as many times as you want.",
-              },
-            ].map(({ title, body }) => (
-              <div key={title} style={s.benefitCard}>
-                <p style={s.cardHeading}>{title}</p>
-                <div style={s.cardBody}>
-                  {body.split("\n").map((line, i) => (
-                    <p key={i} style={{ margin: 0, lineHeight: 1.4 }}>{line}</p>
-                  ))}
+    return (
+        <div style={s.root}>
+            <div style={s.topGlow} />
+            <header style={s.header}>
+                <div style={s.logo}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="124" height="30" viewBox="0 0 62 15" fill="none">
+                        <path d="M53.3895 14.6701V2.76636H48.6951V0H61.479V2.76636H56.7846V14.6701H53.3895Z" fill="white" />
+                        <path d="M44.1028 14.6701V0H47.4979V14.6701H44.1028Z" fill="white" />
+                        <path d="M27.8061 14.6701V0H30.6143L39.2697 10.5625H37.9075V0H41.2606V14.6701H38.4733L29.797 4.10763H31.1592V14.6701H27.8061Z" fill="white" />
+                        <path d="M17.4972 5.90996H24.5598V8.55058H17.4972V5.90996ZM17.7487 11.9457H25.7334V14.6701H14.3746V0H25.461V2.72445H17.7487V11.9457Z" fill="white" />
+                        <path d="M0 14.6701V12.4696L9.07451 1.52988L9.49366 2.76636H0.167658V0H12.5115V2.20052L3.45795 13.1402L3.03881 11.9037H12.8259V14.6701H0Z" fill="white" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="124" height="26" viewBox="0 0 62 13" fill="none">
+                        <path d="M58.5689 9.78414C57.934 9.78414 57.36 9.64063 56.8468 9.35362C56.3424 9.05791 55.9423 8.64913 55.6466 8.12728C55.3509 7.60544 55.203 7.00532 55.203 6.32692C55.203 5.63983 55.3509 5.03971 55.6466 4.52657C55.9423 4.00472 56.3424 3.60029 56.8468 3.31328C57.36 3.01757 57.934 2.86971 58.5689 2.86971C59.169 2.86971 59.7083 3.00887 60.1866 3.28719C60.6737 3.5655 61.0563 3.96123 61.3347 4.47438C61.6217 4.98753 61.7652 5.60504 61.7652 6.32692C61.7652 7.03141 61.626 7.64458 61.3477 8.16642C61.0694 8.68827 60.6867 9.08835 60.1997 9.36666C59.7213 9.64498 59.1777 9.78414 58.5689 9.78414ZM58.608 9.19706C59.1299 9.19706 59.5952 9.07965 60.004 8.84482C60.4214 8.60129 60.7476 8.26209 60.9824 7.82722C61.2259 7.39235 61.3477 6.89225 61.3477 6.32692C61.3477 5.7529 61.2259 5.2528 60.9824 4.82662C60.7476 4.39176 60.4214 4.05691 60.004 3.82208C59.5952 3.57855 59.1299 3.45679 58.608 3.45679C58.0862 3.45679 57.6165 3.57855 57.1991 3.82208C56.7903 4.05691 56.4641 4.39176 56.2206 4.82662C55.9858 5.2528 55.8684 5.7529 55.8684 6.32692C55.8684 6.89225 55.9858 7.39235 56.2206 7.82722C56.4641 8.26209 56.7903 8.60129 57.1991 8.84482C57.6165 9.07965 58.0862 9.19706 58.608 9.19706ZM61.3608 9.73195V7.50107L61.4782 6.31388L61.3477 5.12668V0.0517578H62V9.73195H61.3608Z" fill="white" />
+                        <path d="M50.8866 2.87012C51.4433 2.87012 51.926 2.97883 52.3347 3.19627C52.7522 3.40501 53.074 3.72681 53.3002 4.16168C53.535 4.58785 53.6524 5.11839 53.6524 5.7533V9.73236H53.0001V5.80549C53.0001 5.04012 52.8044 4.45739 52.413 4.05731C52.0303 3.65723 51.4911 3.45719 50.7953 3.45719C50.2648 3.45719 49.8038 3.56591 49.4124 3.78334C49.021 4.00078 48.721 4.30519 48.5122 4.69657C48.3122 5.08795 48.2122 5.55761 48.2122 6.10555V9.73236H47.5599V2.9223H48.1861V4.81398L48.0948 4.60525C48.3035 4.06601 48.6471 3.64419 49.1254 3.33978C49.6038 3.02667 50.1908 2.87012 50.8866 2.87012Z" fill="white" />
+                        <path d="M42.5226 9.78454C41.8703 9.78454 41.2876 9.63669 40.7744 9.34097C40.27 9.04526 39.8655 8.63649 39.5611 8.11464C39.2654 7.5928 39.1176 6.99703 39.1176 6.32733C39.1176 5.64893 39.2654 5.05316 39.5611 4.54002C39.8655 4.01817 40.27 3.6094 40.7744 3.31368C41.2876 3.01797 41.8703 2.87012 42.5226 2.87012C43.1749 2.87012 43.7576 3.01797 44.2708 3.31368C44.7839 3.6094 45.1883 4.01817 45.484 4.54002C45.7798 5.05316 45.9276 5.64893 45.9276 6.32733C45.9276 6.99703 45.7798 7.5928 45.484 8.11464C45.1883 8.63649 44.7839 9.04526 44.2708 9.34097C43.7576 9.63669 43.1749 9.78454 42.5226 9.78454ZM42.5226 9.19747C43.0444 9.19747 43.5141 9.08005 43.9316 8.84522C44.349 8.6017 44.6752 8.2625 44.91 7.82763C45.1448 7.39276 45.2623 6.89266 45.2623 6.32733C45.2623 5.7533 45.1448 5.2532 44.91 4.82703C44.6752 4.39216 44.349 4.05731 43.9316 3.82248C43.5141 3.57895 43.0444 3.45719 42.5226 3.45719C42.0007 3.45719 41.5311 3.57895 41.1136 3.82248C40.7048 4.05731 40.3787 4.39216 40.1351 4.82703C39.9003 5.2532 39.7829 5.7533 39.7829 6.32733C39.7829 6.89266 39.9003 7.39276 40.1351 7.82763C40.3787 8.2625 40.7048 8.6017 41.1136 8.84522C41.5311 9.08005 42.0007 9.19747 42.5226 9.19747Z" fill="white" />
+                        <path d="M33.3946 12.3151C33.0815 12.3151 32.7858 12.2629 32.5075 12.1585C32.2379 12.0541 32.0074 11.9019 31.816 11.7019L32.1422 11.2061C32.3161 11.3888 32.5031 11.5236 32.7032 11.6106C32.9119 11.6975 33.1467 11.741 33.4077 11.741C33.7208 11.741 33.9947 11.6541 34.2296 11.4801C34.4731 11.3062 34.6992 10.9887 34.908 10.5277L35.3776 9.48405L35.4689 9.36664L38.3521 2.92188H39.0175L35.5211 10.6582C35.3385 11.0757 35.1384 11.4018 34.921 11.6367C34.7123 11.8802 34.4818 12.0541 34.2296 12.1585C33.9773 12.2629 33.699 12.3151 33.3946 12.3151ZM35.3646 9.90153L32.2074 2.92188H32.8989L35.769 9.3275L35.3646 9.90153Z" fill="white" />
+                        <path d="M29.0514 9.78454C28.3644 9.78454 27.7555 9.63669 27.225 9.34097C26.7032 9.04526 26.29 8.63649 25.9856 8.11464C25.6899 7.5928 25.5421 6.99703 25.5421 6.32733C25.5421 5.64893 25.6812 5.05316 25.9595 4.54002C26.2465 4.01817 26.6379 3.6094 27.1337 3.31368C27.6294 3.01797 28.1861 2.87012 28.8036 2.87012C29.4211 2.87012 29.9734 3.01362 30.4604 3.30064C30.9562 3.58765 31.3432 3.99208 31.6215 4.51392C31.9085 5.02707 32.0521 5.62284 32.0521 6.30124C32.0521 6.32733 32.0477 6.35777 32.039 6.39256C32.039 6.41865 32.039 6.44909 32.039 6.48388H26.0248V5.97509H31.6868L31.4258 6.22296C31.4345 5.69242 31.3215 5.21841 31.0866 4.80094C30.8605 4.37477 30.5517 4.04426 30.1604 3.80943C29.769 3.56591 29.3167 3.44414 28.8036 3.44414C28.2991 3.44414 27.8469 3.56591 27.4468 3.80943C27.0554 4.04426 26.7466 4.37477 26.5205 4.80094C26.2944 5.21841 26.1813 5.69677 26.1813 6.23601V6.35342C26.1813 6.91005 26.3031 7.40581 26.5466 7.84067C26.7988 8.26685 27.1424 8.6017 27.5772 8.84522C28.0121 9.08005 28.5079 9.19747 29.0645 9.19747C29.4994 9.19747 29.9038 9.11919 30.2778 8.96264C30.6605 8.80609 30.9823 8.56691 31.2432 8.2451L31.6215 8.67562C31.3258 9.04092 30.9518 9.31923 30.4996 9.51057C30.056 9.69322 29.5733 9.78454 29.0514 9.78454Z" fill="white" />
+                        <path d="M21.2915 9.78414C20.6914 9.78414 20.1478 9.64498 19.6608 9.36666C19.1824 9.08835 18.7997 8.68827 18.5127 8.16642C18.2344 7.64458 18.0952 7.03141 18.0952 6.32692C18.0952 5.60504 18.2344 4.98753 18.5127 4.47438C18.7997 3.96123 19.1824 3.5655 19.6608 3.28719C20.1478 3.00887 20.6914 2.86971 21.2915 2.86971C21.9351 2.86971 22.5091 3.01757 23.0136 3.31328C23.5267 3.60029 23.9268 4.00472 24.2138 4.52657C24.5096 5.03971 24.6574 5.63983 24.6574 6.32692C24.6574 7.00532 24.5096 7.60544 24.2138 8.12728C23.9268 8.64913 23.5267 9.05791 23.0136 9.35362C22.5091 9.64063 21.9351 9.78414 21.2915 9.78414ZM17.8734 9.73195V0.0517578H18.5257V5.12668L18.3953 6.31388L18.4997 7.50107V9.73195H17.8734ZM21.2524 9.19706C21.7742 9.19706 22.2439 9.07965 22.6614 8.84482C23.0788 8.60129 23.405 8.26209 23.6398 7.82722C23.8833 7.39235 24.0051 6.89225 24.0051 6.32692C24.0051 5.7529 23.8833 5.2528 23.6398 4.82662C23.405 4.39176 23.0788 4.05691 22.6614 3.82208C22.2439 3.57855 21.7742 3.45679 21.2524 3.45679C20.7305 3.45679 20.2609 3.57855 19.8434 3.82208C19.4346 4.05691 19.1085 4.39176 18.8649 4.82662C18.6301 5.2528 18.5127 5.7529 18.5127 6.32692C18.5127 6.89225 18.6301 7.39235 18.8649 7.82722C19.1085 8.26209 19.4346 8.60129 19.8434 8.84482C20.2609 9.07965 20.7305 9.19706 21.2524 9.19706Z" fill="white" />
+                        <path d="M8.25646 12.3151C7.94336 12.3151 7.64765 12.2629 7.36933 12.1585C7.09971 12.0541 6.86923 11.9019 6.67789 11.7019L7.00404 11.2061C7.17799 11.3888 7.36498 11.5236 7.56502 11.6106C7.77376 11.6975 8.00859 11.741 8.26951 11.741C8.58261 11.741 8.85658 11.6541 9.09141 11.4801C9.33494 11.3062 9.56107 10.9887 9.76981 10.5277L10.2395 9.48405L10.3308 9.36664L13.214 2.92188H13.8793L10.383 10.6582C10.2003 11.0757 10.0003 11.4018 9.78285 11.6367C9.57412 11.8802 9.34364 12.0541 9.09141 12.1585C8.83919 12.2629 8.56087 12.3151 8.25646 12.3151ZM10.2264 9.90153L7.06927 2.92188H7.76071L10.6308 9.3275L10.2264 9.90153Z" fill="white" />
+                        <path d="M1.25242 9.73238V1.87864C1.25242 1.31331 1.41333 0.861041 1.73513 0.521844C2.06563 0.173948 2.53529 0 3.14411 0C3.39633 0 3.64421 0.0391384 3.88773 0.117415C4.13126 0.186994 4.3313 0.295712 4.48785 0.443568L4.22693 0.939318C4.09647 0.808858 3.93992 0.713186 3.75727 0.652304C3.57463 0.591423 3.37894 0.560982 3.1702 0.560982C2.75272 0.560982 2.43527 0.678397 2.21783 0.913226C2.0004 1.13936 1.89168 1.47856 1.89168 1.93082V3.07888L1.90473 3.39198V9.73238H1.25242ZM0 3.4833V2.92232H4.07038V3.4833H0ZM5.40108 9.73238V0.0521844H6.05338V9.73238H5.40108Z" fill="white" />
+                    </svg>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ HOW IT WORKS ════════════════════════════════════════════════════ */}
-      <section id="how-it-works" style={s.section}>
-        <div style={s.inner}>
-          <div style={s.howGrid}>
-            {/* Left: steps */}
-            <div style={s.howLeft}>
-              <p style={s.sectionLabel}>How it works</p>
-              <h2 style={s.sectionHeading}>Four steps to cockpit mastery</h2>
-              <div style={s.stepsCol}>
-                {/* Active step */}
-                <div style={s.stepActive}>
-                  <p style={s.cardHeading}>Choose your aircraft</p>
-                  <p style={{ ...s.cardBody, margin: 0 }}>
-                    Select a cockpit that matches the aircraft you fly — created by your school, club or other pilots.
-                  </p>
+                <nav style={s.nav}>
+                    <button style={s.navButton} disabled>How it works</button>
+                    <button style={s.navButton} disabled>Why it matters</button>
+                    <button style={s.navButton} disabled>Who is built for</button>
+                    <button style={s.navButton} disabled>Roles and features</button>
+                    <button style={s.navButton} disabled>Pricing</button>
+                </nav>
+                <div style={s.authButtons}>
+                    <button style={s.navButton} onClick={() => navigate("/auth?mode=signup")}>Sign up</button>
+                    <button style={s.navButtonAccent} onClick={() => navigate("/auth?mode=login")}>Log in</button>
                 </div>
-                {/* Inactive steps */}
-                {[
-                  { title: "Select a scenario", body: "Normal procedures, abnormal situations or emergency flows." },
-                  { title: "Fly the flow", body: "Tap the real cockpit controls in the correct order and receive instant feedback." },
-                  { title: "Repeat until it's automatic", body: "Five minutes a day keeps your cockpit flows fresh — so you don't hesitate in the air." },
-                ].map(({ title, body }) => (
-                  <div key={title} style={s.stepInactive}>
-                    <p style={s.cardHeading}>{title}</p>
-                    <p style={{ ...s.cardBody, margin: 0 }}>{body}</p>
-                  </div>
-                ))}
-              </div>
+            </header>
+            <div style={s.hero}>
+                <h1 style={s.heroTitle}>Master your cockpit.<br />Anywhere, anytime.</h1>
             </div>
-            {/* Right: app screenshot */}
-            <div style={s.howRight}>
-              <img src={imgAppRightPanel} alt="ZENIT app interface" style={s.howAppImg} />
+            <div style={s.divider} />
+            <p style={s.subheading}>Turn your everyday device into an interactive cockpit trainer<br />for safer, more confident flights in any aircraft you fly.</p>
+            <div style={s.ctaRow}>
+                <button style={s.ctaButton}>
+                    <span>Start training as a pilot</span>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <button style={s.ctaButtonSecondary}>
+                    <span>For flight schools</span>
+                </button>
             </div>
-          </div>
+            <div style={s.cockpitImage} />
         </div>
-      </section>
+    );
+};
 
-      {/* ═══ WHY IT MATTERS ══════════════════════════════════════════════════ */}
-      <section id="why-it-matters" style={s.sectionDark}>
-        <div style={s.inner}>
-          <div style={s.whyGrid}>
-            <div style={s.whyLeft}>
-              <p style={s.sectionLabel}>Why it matters</p>
-              <h2 style={s.sectionHeading}>
-                Human error is the leading cause of aviation incidents.
-              </h2>
-              <p style={s.bodyText}>
-                Most mistakes happen when pilots don't have procedures memorized — they hesitate,
-                skip steps, or act from habit instead of training. ZENIT helps you internalize the
-                right flows before you ever leave the ground.
-              </p>
-              <button style={s.whyCta}>
-                Read the research
-                <img src={imgArrowRightBrand} alt="" style={s.btnIcon} />
-              </button>
-            </div>
-            <div style={s.whyRight}>
-              {[
-                { value: "80%", label: "of aviation accidents involve human factors" },
-                { value: "3×", label: "faster flow retention versus paper checklists" },
-                { value: "5 min", label: "per day keeps your procedures current" },
-              ].map(({ value, label }) => (
-                <div key={value} style={s.statCard}>
-                  <p style={s.statValue}>{value}</p>
-                  <p style={s.statLabel}>{label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ WHO ZENIT IS BUILT FOR ══════════════════════════════════════════ */}
-      <section id="who-zenit-is-built-for" style={s.section}>
-        <div style={s.inner}>
-          <p style={s.sectionLabel}>Who ZENIT is built for</p>
-          <h2 style={s.sectionHeading}>Built for every stage of your flying journey</h2>
-          <div style={s.audienceGrid}>
-            {[
-              {
-                icon: imgIconSchool,
-                title: "Student pilots",
-                body: "Build correct habits from day one. Arrive at each lesson having already practiced the flows — and make the most of every hour in the air.",
-              },
-              {
-                icon: imgIconCrown,
-                title: "Private & club pilots",
-                body: "Stay sharp between flights. Refresh your flows after a break, transition to a new type, or simply keep your skills from fading.",
-              },
-              {
-                icon: imgIconTravel,
-                title: "Professional pilots",
-                body: "Maintain recurrency across multiple types. Detailed session logs for every flow you practice, ready for your instructor or examiner.",
-              },
-              {
-                icon: imgIconVilla,
-                title: "Flight schools & fleet owners",
-                body: "Equip your students with a cockpit they can practice on 24/7. Assign cockpits, track progress, and reduce your fleet's wet time.",
-              },
-            ].map(({ icon, title, body }) => (
-              <div key={title} style={s.audienceCard}>
-                <img src={icon} alt="" style={s.audienceIcon} />
-                <p style={s.cardHeading}>{title}</p>
-                <p style={s.cardBodySmall}>{body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ ROLES AND FEATURES ══════════════════════════════════════════════ */}
-      <section id="roles-and-features" style={s.sectionDark}>
-        <div style={s.inner}>
-          <p style={s.sectionLabel}>Roles and features</p>
-          <h2 style={s.sectionHeading}>One platform, every perspective</h2>
-          <div style={s.rolesGrid}>
-            {[
-              {
-                role: "Pilot",
-                title: "Train on your own terms",
-                body: "Access your assigned cockpits, run through flows at your pace, and review every session in detail.",
-                features: ["Interactive checklist runner", "Session history & scoring", "Offline mode on any device", "Progress sharing with instructor"],
-                accent: false,
-              },
-              {
-                role: "Creator · Instructor",
-                title: "Build and assign cockpits",
-                body: "Create custom cockpit configurations, upload your SOPs, and assign them to individual students or entire groups.",
-                features: ["Cockpit builder", "Student management", "Progress reports & session logs", "Custom flow authoring"],
-                accent: true,
-              },
-              {
-                role: "Flight school · Fleet",
-                title: "Manage at scale",
-                body: "Organisation-level dashboards, multi-aircraft libraries, and billing that scales with your operation.",
-                features: ["Fleet cockpit library", "Instructor accounts", "Organisation analytics", "Bulk student enrollment"],
-                accent: false,
-              },
-            ].map(({ role, title, body, features, accent }) => (
-              <div key={role} style={accent ? { ...s.roleCard, ...s.roleCardAccent } : s.roleCard}>
-                <div style={s.rolesImageWrap}>
-                  <img src={imgRolesPlaceholder} alt="" style={s.rolesImage} />
-                </div>
-                <div style={s.roleContent}>
-                  <span style={accent ? s.roleTagAccent : s.roleTag}>{role}</span>
-                  <p style={s.cardHeading}>{title}</p>
-                  <p style={s.cardBodySmall}>{body}</p>
-                  <ul style={s.featureList}>
-                    {features.map((f) => (
-                      <li key={f} style={s.featureItem}>
-                        <span style={s.featureDot} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ PRICING ═════════════════════════════════════════════════════════ */}
-      <section id="pricing" style={s.section}>
-        <div style={s.inner}>
-          <p style={s.sectionLabel}>Pricing</p>
-          <h2 style={s.sectionHeading}>Simple, transparent plans</h2>
-          <div style={s.pricingGrid}>
-            {/* Occasional pilot */}
-            <div style={s.pricingCard}>
-              <p style={s.planName}>Occasional pilot</p>
-              <p style={s.planPrice}>199 <span style={s.planCurrency}>CZK / mo</span></p>
-              <p style={s.planDesc}>For pilots who fly a few times a year and want to stay prepared.</p>
-              <img src={imgPricingDivider} alt="" style={s.pricingDivider} />
-              <ul style={s.planFeatures}>
-                {["Up to 3 cockpits", "Unlimited sessions", "Session history", "Offline mode"].map((f) => (
-                  <li key={f} style={s.planFeatureItem}>{f}</li>
-                ))}
-              </ul>
-              <button style={s.pricingCta}>
-                Get started
-                <img src={imgPricingArrow} alt="" style={s.btnIcon} />
-              </button>
-            </div>
-
-            {/* Student pilot — featured */}
-            <div style={{ ...s.pricingCard, ...s.pricingCardFeatured }}>
-              <p style={{ ...s.planName, color: C.accent }}>Student pilot</p>
-              <p style={{ ...s.planPrice, color: C.accent }}>399 <span style={{ ...s.planCurrency, color: C.accent }}>CZK / mo</span></p>
-              <p style={s.planDesc}>For active students and pilots who fly regularly and want to improve faster.</p>
-              <img src={imgPricingDividerF} alt="" style={s.pricingDivider} />
-              <ul style={s.planFeatures}>
-                {["Unlimited cockpits", "Unlimited sessions", "Session history & scoring", "Offline mode", "Share progress with instructor"].map((f) => (
-                  <li key={f} style={s.planFeatureItem}>{f}</li>
-                ))}
-              </ul>
-              <button style={{ ...s.pricingCta, ...s.pricingCtaFeatured }}>
-                Get started
-                <img src={imgPricingArrowF} alt="" style={s.btnIcon} />
-              </button>
-            </div>
-
-            {/* Active pilot */}
-            <div style={s.pricingCard}>
-              <p style={s.planName}>Active pilot</p>
-              <p style={s.planPrice}>799 <span style={s.planCurrency}>CZK / mo</span></p>
-              <p style={s.planDesc}>For professionals and instructors who need full access and detailed analytics.</p>
-              <img src={imgPricingDivider} alt="" style={s.pricingDivider} />
-              <ul style={s.planFeatures}>
-                {["Unlimited cockpits", "Unlimited sessions", "Full session analytics", "Offline mode", "Instructor tools", "Priority support"].map((f) => (
-                  <li key={f} style={s.planFeatureItem}>{f}</li>
-                ))}
-              </ul>
-              <button style={s.pricingCta}>
-                Get started
-                <img src={imgPricingArrow} alt="" style={s.btnIcon} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ FLIGHT SCHOOLS ══════════════════════════════════════════════════ */}
-      <section style={s.sectionDark}>
-        <div style={s.inner}>
-          <div style={s.schoolsGrid}>
-            {/* Photo card */}
-            <div style={s.schoolCard}>
-              <img src={imgFlightSchoolPic} alt="Flight school cockpit" style={s.schoolPhoto} />
-              <div style={s.schoolOverlay}>
-                <div style={s.schoolIcon}>
-                  <img src={imgIconVilla} alt="" style={{ width: 24, height: 24, objectFit: "contain" }} />
-                </div>
-                <p style={{ ...s.cardHeading, margin: 0 }}>For flight schools & fleet owners</p>
-                <p style={s.cardBodySmall}>
-                  Equip every student with a cockpit available 24/7. Track their progress,
-                  assign aircraft, and cut wet-aircraft costs across your entire operation.
-                </p>
-                <BtnBrandSecondary>Talk to us</BtnBrandSecondary>
-              </div>
-            </div>
-
-            {/* Launch special card */}
-            <div style={s.launchCard}>
-              <span style={s.launchBadge}>Launch special</span>
-              <p style={{ ...s.cardHeading, color: C.accent }}>First 3 months free for flight schools</p>
-              <p style={s.cardBodySmall}>
-                We're in early access. Flight schools and academies that join now get their
-                first three months on us — no credit card required.
-              </p>
-              <BtnPrimary>
-                Claim the offer
-                <img src={imgArrowRightHero} alt="" style={s.btnIcon} />
-              </BtnPrimary>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ VOUCHER BANNER ══════════════════════════════════════════════════ */}
-      <section style={s.voucherBanner}>
-        <div style={s.inner}>
-          <div style={s.voucherInner}>
-            <p style={s.voucherText}>
-              Not ready to subscribe? We also offer <strong style={{ color: C.accent }}>gift vouchers</strong> — perfect
-              for pilots who want to try ZENIT or for those who want to give the gift of safer flying.
-            </p>
-            <button style={s.voucherBtn}>
-              <img src={imgVoucherIcon} alt="" style={s.btnIcon} />
-              Get a voucher
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ FINAL CTA ═══════════════════════════════════════════════════════ */}
-      <section style={s.finalCta}>
-        <div style={s.finalCtaInner}>
-          <p style={s.sectionLabel}>Start today</p>
-          <h2 style={{ ...s.sectionHeading, fontSize: 48, margin: "0 0 16px" }}>
-            The safest part of your next flight<br />starts on the ground.
-          </h2>
-          <p style={{ ...s.bodyText, marginBottom: 40 }}>
-            Join pilots and flight schools already training smarter with ZENIT.
-          </p>
-          <div style={s.heroCtas}>
-            <BtnPrimary>
-              Start training free
-              <img src={imgCtaIcon} alt="" style={s.btnIcon} />
-            </BtnPrimary>
-            <BtnBrandSecondary>For flight schools</BtnBrandSecondary>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ FOOTER ══════════════════════════════════════════════════════════ */}
-      <footer style={s.footer}>
-        <div style={s.footerInner}>
-          {/* Brand */}
-          <div style={s.footerBrand}>
-            <img src={imgFooterLogo} alt="ZENIT" style={s.footerLogoImg} />
-            <img src={imgFooterFlyBeyond} alt="fly beyond" style={s.footerTaglineImg} />
-            <div style={s.socialRow}>
-              {[
-                { src: imgFooterX,         label: "X / Twitter"  },
-                { src: imgFooterInstagram, label: "Instagram"    },
-                { src: imgFooterYoutube,   label: "YouTube"      },
-                { src: imgFooterLinkedin,  label: "LinkedIn"     },
-              ].map(({ src, label }) => (
-                <a key={label} href="#" style={s.socialBtn} aria-label={label}>
-                  <img src={src} alt={label} style={s.socialIcon} />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Link columns */}
-          <div style={s.footerCols}>
-            <div style={s.footerCol}>
-              <p style={s.footerColTitle}>Use cases</p>
-              {["Student pilots", "Private pilots", "Professional pilots", "Flight schools"].map((l) => (
-                <a key={l} href="#" style={s.footerLink}>{l}</a>
-              ))}
-            </div>
-            <div style={s.footerCol}>
-              <p style={s.footerColTitle}>Explore</p>
-              {["How it works", "Pricing", "Roles and features", "Sign up", "Log in"].map((l) => (
-                <a key={l} href="#" style={s.footerLink}>{l}</a>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={s.footerBottom}>
-          <span style={s.footerCopy}>© 2026 ZENIT. All rights reserved.</span>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
+export default Welcome;
 
 const s: Record<string, React.CSSProperties> = {
-  // Page
-  page: {
-    backgroundColor: C.bgDefault,
-    color: C.textPrimary,
-    fontFamily: "'Inter', sans-serif",
-    minHeight: "100vh",
-    overflowX: "hidden",
-  },
-
-  // ── Shared layout ──────────────────────────────────────────────────────────
-  inner: {
-    maxWidth: 1280,
-    margin: "0 auto",
-    padding: "0 80px",
-  },
-  section: {
-    padding: "80px 0",
-  },
-  sectionDark: {
-    backgroundColor: C.bgSecondary,
-    padding: "80px 0",
-  },
-  sectionLabel: {
-    color: C.accent,
-    fontSize: 16,
-    fontWeight: 400,
-    letterSpacing: "0.02em",
-    marginBottom: 16,
-    margin: "0 0 16px",
-  },
-  sectionHeading: {
-    fontSize: 32,
-    fontWeight: 700,
-    lineHeight: 1.2,
-    letterSpacing: "-0.64px",
-    color: C.textPrimary,
-    margin: "0 0 48px",
-  },
-  bodyText: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textNeutral,
-    margin: "0 0 24px",
-  },
-
-  // ── Buttons ────────────────────────────────────────────────────────────────
-  btnPrimary: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.accent,
-    color: C.accentText,
-    border: `1px solid ${C.accent}`,
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-  },
-  btnBrandSec: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.bgBrandSec,
-    color: C.accent,
-    border: "none",
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-  },
-  btnSubtle: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "transparent",
-    color: C.accent,
-    border: "none",
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-  },
-  btnIcon: {
-    width: 20,
-    height: 20,
-    objectFit: "contain",
-    flexShrink: 0,
-  },
-
-  // ── Navbar ─────────────────────────────────────────────────────────────────
-  nav: {
-    position: "sticky",
-    top: 0,
-    zIndex: 100,
-    backgroundColor: "rgba(18,18,17,0.9)",
-    backdropFilter: "blur(20px)",
-    borderBottom: `1px solid ${C.borderNeutral}`,
-  },
-  navInner: {
-    maxWidth: 1280,
-    margin: "0 auto",
-    padding: "16px 80px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 32,
-  },
-  navBrand: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    flex: "0 0 auto",
-  },
-  navLogoImg: {
-    height: 27,
-    objectFit: "contain",
-    alignSelf: "flex-start",
-  },
-  navTaglineImg: {
-    height: 23,
-    objectFit: "contain",
-    alignSelf: "flex-start",
-  },
-  navLinks: {
-    display: "flex",
-    gap: 4,
-    alignItems: "center",
-    flex: 1,
-    justifyContent: "center",
-  },
-  navLink: {
-    color: C.textPrimary,
-    textDecoration: "none",
-    fontSize: 16,
-    fontWeight: 400,
-    padding: "10px 12px",
-    borderRadius: 8,
-    whiteSpace: "nowrap",
-  },
-  navActions: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center",
-    flex: "0 0 auto",
-  },
-
-  // ── Hero ────────────────────────────────────────────────────────────────────
-  hero: {
-    padding: "80px 80px 0",
-    maxWidth: 1280,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 48,
-  },
-  heroText: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: 24,
-    maxWidth: 800,
-  },
-  heroHeading: {
-    fontSize: 72,
-    fontWeight: 700,
-    lineHeight: 1.2,
-    letterSpacing: "-2.16px",
-    textAlign: "center",
-    color: C.textPrimary,
-    margin: 0,
-  },
-  heroSub: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textSecondary,
-    textAlign: "center",
-    maxWidth: 573,
-    margin: 0,
-  },
-  heroCtas: {
-    display: "flex",
-    gap: 14,
-    alignItems: "center",
-  },
-  heroAppWrap: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-  },
-  heroAppImg: {
-    width: "100%",
-    maxWidth: 1120,
-    borderRadius: 16,
-    objectFit: "cover",
-    display: "block",
-  },
-
-  // ── Benefits ────────────────────────────────────────────────────────────────
-  benefitsGrid: {
-    display: "flex",
-    gap: 32,
-  },
-  benefitCard: {
-    flex: "1 0 0",
-    backgroundColor: C.bgCard,
-    border: `1px solid ${C.borderCard}`,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-    minWidth: 0,
-  },
-
-  // ── Shared card text ────────────────────────────────────────────────────────
-  cardHeading: {
-    fontSize: 32,
-    fontWeight: 700,
-    lineHeight: 1.2,
-    color: C.textPrimary,
-    margin: 0,
-  },
-  cardBody: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textNeutral,
-  },
-  cardBodySmall: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textNeutral,
-    margin: 0,
-  },
-
-  // ── How it works ────────────────────────────────────────────────────────────
-  howGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 64,
-    alignItems: "start",
-  },
-  howLeft: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  stepsCol: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  stepActive: {
-    backgroundColor: C.bgActive,
-    border: `1px solid ${C.borderBrand}`,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-  },
-  stepInactive: {
-    backgroundColor: C.bgSecondary,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-    opacity: 0.5,
-  },
-  howRight: {
-    position: "sticky",
-    top: 80,
-  },
-  howAppImg: {
-    width: "100%",
-    borderRadius: 16,
-    objectFit: "cover",
-    display: "block",
-  },
-
-  // ── Why it matters ──────────────────────────────────────────────────────────
-  whyGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 80,
-    alignItems: "start",
-  },
-  whyLeft: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  whyCta: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "transparent",
-    color: C.accent,
-    border: "none",
-    borderRadius: 8,
-    padding: 0,
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-  },
-  whyRight: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  statCard: {
-    backgroundColor: C.bgCard,
-    border: `1px solid ${C.borderCard}`,
-    borderRadius: 16,
-    padding: "28px 32px",
-  },
-  statValue: {
-    fontSize: 48,
-    fontWeight: 700,
-    color: C.accent,
-    lineHeight: 1,
-    margin: "0 0 8px",
-  },
-  statLabel: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textNeutral,
-    margin: 0,
-  },
-
-  // ── Who ZENIT is built for ──────────────────────────────────────────────────
-  audienceGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: 24,
-  },
-  audienceCard: {
-    backgroundColor: C.bgCard,
-    border: `1px solid ${C.borderCard}`,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  audienceIcon: {
-    width: 32,
-    height: 32,
-    objectFit: "contain",
-    flexShrink: 0,
-  },
-
-  // ── Roles ────────────────────────────────────────────────────────────────────
-  rolesGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 24,
-  },
-  roleCard: {
-    backgroundColor: C.bgCard,
-    border: `1px solid ${C.borderCard}`,
-    borderRadius: 16,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-  },
-  roleCardAccent: {
-    border: `1px solid ${C.borderBrand}`,
-    backgroundColor: C.bgActive,
-  },
-  rolesImageWrap: {
-    height: 200,
-    overflow: "hidden",
-  },
-  rolesImage: {
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  roleContent: {
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    flex: 1,
-  },
-  roleTag: {
-    display: "inline-block",
-    backgroundColor: "rgba(255,255,255,0.08)",
-    color: C.textSecondary,
-    fontSize: 14,
-    fontWeight: 400,
-    padding: "4px 10px",
-    borderRadius: 6,
-    border: `1px solid ${C.borderNeutral}`,
-    alignSelf: "flex-start",
-  },
-  roleTagAccent: {
-    display: "inline-block",
-    backgroundColor: C.bgBrandSec,
-    color: C.accent,
-    fontSize: 14,
-    fontWeight: 400,
-    padding: "4px 10px",
-    borderRadius: 6,
-    border: `1px solid ${C.borderBrand}`,
-    alignSelf: "flex-start",
-  },
-  featureList: {
-    listStyle: "none",
-    margin: "8px 0 0",
-    padding: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  },
-  featureItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textSecondary,
-  },
-  featureDot: {
-    width: 6,
-    height: 6,
-    borderRadius: "50%",
-    backgroundColor: C.accent,
-    flexShrink: 0,
-  },
-
-  // ── Pricing ──────────────────────────────────────────────────────────────────
-  pricingGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 24,
-    alignItems: "start",
-  },
-  pricingCard: {
-    backgroundColor: C.bgCard,
-    border: `1px solid ${C.borderCard}`,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  pricingCardFeatured: {
-    backgroundColor: C.bgActive,
-    border: `1px solid ${C.borderBrand}`,
-  },
-  planName: {
-    fontSize: 16,
-    fontWeight: 400,
-    color: C.textSecondary,
-    margin: 0,
-  },
-  planPrice: {
-    fontSize: 40,
-    fontWeight: 700,
-    lineHeight: 1,
-    color: C.textPrimary,
-    margin: 0,
-  },
-  planCurrency: {
-    fontSize: 20,
-    fontWeight: 400,
-  },
-  planDesc: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textTertiary,
-    margin: 0,
-  },
-  pricingDivider: {
-    width: "100%",
-    height: 1,
-    objectFit: "cover",
-  },
-  planFeatures: {
-    listStyle: "none",
-    margin: 0,
-    padding: 0,
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    flex: 1,
-  },
-  planFeatureItem: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textNeutral,
-  },
-  pricingCta: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: C.bgBrandSec,
-    color: C.accent,
-    border: "none",
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-    width: "100%",
-  },
-  pricingCtaFeatured: {
-    backgroundColor: C.accent,
-    color: C.accentText,
-  },
-
-  // ── Flight Schools ────────────────────────────────────────────────────────────
-  schoolsGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 24,
-    alignItems: "stretch",
-  },
-  schoolCard: {
-    borderRadius: 16,
-    overflow: "hidden",
-    position: "relative",
-    minHeight: 400,
-    border: `1px solid ${C.borderCard}`,
-  },
-  schoolPhoto: {
-    position: "absolute",
-    inset: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-  },
-  schoolOverlay: {
-    position: "absolute",
-    inset: 0,
-    background: "linear-gradient(to top, rgba(18,18,17,0.95) 40%, rgba(18,18,17,0.4) 100%)",
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "flex-end",
-    gap: 16,
-  },
-  schoolIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: C.bgBrandSec,
-    border: `1px solid ${C.borderBrand}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  launchCard: {
-    backgroundColor: C.bgActive,
-    border: `1px solid ${C.borderBrand}`,
-    borderRadius: 16,
-    padding: 32,
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-    justifyContent: "center",
-  },
-  launchBadge: {
-    display: "inline-block",
-    backgroundColor: C.bgBrandSec,
-    color: C.accent,
-    fontSize: 14,
-    fontWeight: 400,
-    padding: "4px 12px",
-    borderRadius: 6,
-    border: `1px solid ${C.borderBrand}`,
-    alignSelf: "flex-start",
-  },
-
-  // ── Voucher banner ────────────────────────────────────────────────────────────
-  voucherBanner: {
-    borderTop: `1px solid ${C.borderNeutral}`,
-    borderBottom: `1px solid ${C.borderNeutral}`,
-    padding: "32px 0",
-  },
-  voucherInner: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 32,
-  },
-  voucherText: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textSecondary,
-    margin: 0,
-    flex: 1,
-  },
-  voucherBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.bgBrandSec,
-    color: C.accent,
-    border: "none",
-    borderRadius: 8,
-    padding: "10px 16px",
-    fontSize: 16,
-    fontWeight: 400,
-    cursor: "pointer",
-    lineHeight: 1,
-    flexShrink: 0,
-  },
-
-  // ── Final CTA ──────────────────────────────────────────────────────────────
-  finalCta: {
-    padding: "120px 0",
-  },
-  finalCtaInner: {
-    maxWidth: 1280,
-    margin: "0 auto",
-    padding: "0 80px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-  },
-
-  // ── Footer ──────────────────────────────────────────────────────────────────
-  footer: {
-    backgroundColor: C.bgSecondary,
-    borderTop: `1px solid ${C.borderNeutral}`,
-    padding: "64px 0 32px",
-  },
-  footerInner: {
-    maxWidth: 1280,
-    margin: "0 auto 48px",
-    padding: "0 80px",
-    display: "flex",
-    gap: 80,
-    alignItems: "flex-start",
-  },
-  footerBrand: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-    flex: "0 0 220px",
-  },
-  footerLogoImg: {
-    height: 27,
-    objectFit: "contain",
-    alignSelf: "flex-start",
-  },
-  footerTaglineImg: {
-    height: 23,
-    objectFit: "contain",
-    alignSelf: "flex-start",
-  },
-  socialRow: {
-    display: "flex",
-    gap: 8,
-    marginTop: 8,
-  },
-  socialBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    border: `1px solid ${C.borderNeutral}`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textDecoration: "none",
-    flexShrink: 0,
-  },
-  socialIcon: {
-    width: 18,
-    height: 18,
-    objectFit: "contain",
-  },
-  footerCols: {
-    display: "flex",
-    gap: 64,
-    flex: 1,
-  },
-  footerCol: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 12,
-  },
-  footerColTitle: {
-    fontSize: 16,
-    fontWeight: 400,
-    color: C.textPrimary,
-    margin: "0 0 4px",
-  },
-  footerLink: {
-    fontSize: 16,
-    lineHeight: 1.4,
-    color: C.textSecondary,
-    textDecoration: "none",
-  },
-  footerBottom: {
-    maxWidth: 1280,
-    margin: "0 auto",
-    padding: "24px 80px 0",
-    borderTop: `1px solid ${C.borderNeutral}`,
-  },
-  footerCopy: {
-    fontSize: 14,
-    color: C.textTertiary,
-  },
+    root: {
+        width: "100vw",
+        background: "#121211",
+        padding: "32px 80px",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        overscrollBehavior: "none",
+        overflowX: "clip",
+        position: "relative",
+    },
+    header: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "relative",
+        zIndex: 1,
+    },
+    logo: {
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        gap: "4px",
+    },
+    nav: {
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+    },
+    navButton: {
+        background: "transparent",
+        border: "none",
+        color: "#FFFFFF",
+        fontSize: 20,
+        fontWeight: 400,
+        padding: "12px 12px",
+        borderRadius: 8,
+        cursor: "pointer",
+    },
+    navButtonAccent: {
+        background: "rgba(233,253,151,0.18)",
+        border: "none",
+        color: "#e9fd97",
+        fontSize: 20,
+        fontWeight: 400,
+        padding: "12px 12px",
+        borderRadius: 8,
+        cursor: "pointer",
+    },
+    topGlow: {
+        position: "absolute",
+        top: 0,
+        left: "50%",
+        transform: "translate(-50%, -70%)",
+        width: "120%",
+        height: "90%",
+        background: "radial-gradient(45.34% 45.34% at 50% 50%, rgba(233, 253, 151, 0.80) 0%, rgba(18, 18, 17, 0.10) 100%)",
+        filter: "blur(100px)",
+        pointerEvents: "none",
+        zIndex: 0,
+    },
+    divider: {
+        height: 1,
+        width: "70%",
+        background: "linear-gradient(90deg, #121211 5%, #FFF 52.4%, #121211 95%)",
+        marginTop: 40,
+        marginBottom: 40,
+        marginInline: "auto",
+        position: "relative",
+        zIndex: 1,
+    },
+    subheading: {
+        color: "#fff",
+        textAlign: "center",
+        fontSize: 24,
+        fontStyle: "normal",
+        fontWeight: 400,
+        lineHeight: "140%",
+        margin: 0,
+        position: "relative",
+        zIndex: 1,
+    },
+    cockpitImage: {
+        width: "100vw",
+        marginLeft: "calc(50% - 50vw)",
+        marginTop: 180,
+        aspectRatio: "173/99",
+        background: `linear-gradient(90deg, #121211 -0.85%, rgba(18, 18, 17, 0.00) 6.18%, rgba(18, 18, 17, 0.40) 93.7%, #121211 100%), linear-gradient(180deg, #121211 3.89%, rgba(19, 19, 17, 0.00) 26.99%, rgba(18, 18, 17, 0.00) 75.05%, #121211 100%), url(/media/cockpit.png) lightgray -37.045px -0.413px / 108.707% 126.617% no-repeat`,
+        position: "relative",
+        zIndex: 1,
+    },
+    ctaButtonSecondary: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: 12,
+        borderRadius: 8,
+        background: "rgba(233,253,151,0.18)",
+        color: "#E9FD97",
+        fontSize: 20,
+        fontWeight: 400,
+        lineHeight: "100%",
+        cursor: "pointer",
+    },
+    ctaRow: {
+        display: "flex",
+        justifyContent: "center",
+        gap: 16,
+        marginTop: 32,
+        position: "relative",
+        zIndex: 1,
+    },
+    ctaButton: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: 12,
+        borderRadius: 8,
+        background: "#E9FD97",
+        color: "#313C01",
+        fontSize: 20,
+        fontWeight: 400,
+        lineHeight: "100%",
+        cursor: "pointer",
+    },
+    hero: {
+        display: "flex",
+        justifyContent: "center",
+        marginTop: 100,
+        position: "relative",
+        zIndex: 1,
+    },
+    heroTitle: {
+        color: "#ffffff",
+        textAlign: "center",
+        fontSize: 72,
+        fontStyle: "normal",
+        fontWeight: 700,
+        lineHeight: "120%",
+        letterSpacing: "-2.16px",
+        margin: 0,
+    },
+    authButtons: {
+        display: "flex",
+        alignItems: "center",
+        gap: 16,
+    },
 };

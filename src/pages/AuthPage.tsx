@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { signInWithPopup, sendSignInLinkToEmail } from "firebase/auth";
 import { auth, googleProvider } from "../firebase/firebase";
+import { useSearchParams } from "react-router-dom";
 
 const PLANE_IMAGE = "/media/plane.png";
 const WORLD_MAP_IMAGE = "/media/map.svg";
@@ -121,7 +122,8 @@ export default function AuthPage() {
     const [surname, setSurname] = useState("");
     const [rememberMe, setRememberMe] = useState(true);
     const [language, setLanguage] = useState<Lang>("English");
-    const [mode, setMode] = useState<Mode>("login");
+    const [searchParams] = useSearchParams();
+    const [mode, setMode] = useState<Mode>((searchParams.get("mode") as Mode) ?? "login");
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [animating, setAnimating] = useState(false);
