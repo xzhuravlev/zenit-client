@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useParams } from "react-router-dom";
 import * as THREE from "three";
 import api from "../api/axios";
@@ -258,6 +259,13 @@ const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screen
     const photo = instrument.media.find(m => m.type === "PHOTO");
     const textMedia = instrument.media.find(m => m.type === "TEXT");
     const [description, setDescription] = useState<string | null>(null);
+    const [lightbox, setLightbox] = useState(false);
+    const [lightboxClosing, setLightboxClosing] = useState(false);
+
+    const closeLightbox = () => {
+        setLightboxClosing(true);
+        setTimeout(() => { setLightbox(false); setLightboxClosing(false); }, 200);
+    };
 
     useEffect(() => {
         if (!textMedia) return;
@@ -267,39 +275,81 @@ const HotspotPopup: React.FC<HotspotPopupProps> = ({ instrument, screenX, screen
             .catch(() => { });
     }, [textMedia?.link]);
 
-    const left = Math.min(screenX + 16, window.innerWidth - 320);
-    const top = Math.min(screenY - 20, window.innerHeight - 300);
+    const left = Math.min(screenX + 32, window.innerWidth - 416);
 
     return (
-        <div style={{
-            position: "fixed", left, top, width: 300, zIndex: 200,
-            backgroundColor: "rgba(18,18,17,0.9)",
-            backdropFilter: "blur(5px)",
-            WebkitBackdropFilter: "blur(5px)",
-            borderRadius: 16,
-            border: "1px solid #393A36",
-            padding: 16,
-        }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <span style={{ fontSize: 20, fontWeight: 400, color: "#fff" }}>{instrument.name}</span>
-                <button
-                    onClick={onClose}
-                    style={{ background: "rgba(233, 253, 151, 0.18)", border: "none", cursor: "pointer", color: "#E9FD97", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
+        <>
+            <div style={{
+                position: "fixed", left, top: screenY, transform: "translateY(-50%)", width: 400, zIndex: 200,
+                backgroundColor: "rgba(18,18,17,0.9)",
+                backdropFilter: "blur(5px)",
+                WebkitBackdropFilter: "blur(5px)",
+                borderRadius: 16,
+                border: "1px solid #393A36",
+                padding: 16,
+            }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                    <span style={{ fontSize: 20, fontWeight: 400, color: "#fff" }}>{instrument.name}</span>
+                    <button
+                        onClick={onClose}
+                        style={{ background: "rgba(233, 253, 151, 0.18)", border: "none", cursor: "pointer", color: "#E9FD97", width: 32, height: 32, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                </div>
+                {description && (
+                    <p style={{ fontSize: 16, fontWeight: 400, color: "rgba(255,255,255,0.7)", margin: "0 0 10px 0", lineHeight: "150%" }}>
+                        {description}
+                    </p>
+                )}
+                {photo && (
+                    <img
+                        src={photo.link}
+                        alt={instrument.name}
+                        style={{ width: "100%", borderRadius: 8, objectFit: "cover", maxHeight: 300, cursor: "zoom-in" }}
+                        onClick={() => setLightbox(true)}
+                    />
+                )}
             </div>
-            {description && (
-                <p style={{ fontSize: 16, fontWeight: 400, color: "rgba(255,255,255,0.7)", margin: "0 0 10px 0", lineHeight: "150%" }}>
-                    {description}
-                </p>
+
+            {lightbox && photo && createPortal(
+                <>
+                    <style>{`
+                        @keyframes lbBackdropIn  { from { opacity: 0; } to { opacity: 1; } }
+                        @keyframes lbBackdropOut { from { opacity: 1; } to { opacity: 0; } }
+                        @keyframes lbImageIn     { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                        @keyframes lbImageOut    { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); } }
+                    `}</style>
+                    <div
+                        style={{
+                            position: "fixed", inset: 0, zIndex: 500,
+                            background: "rgba(0,0,0,0.85)",
+                            backdropFilter: "blur(12px)",
+                            WebkitBackdropFilter: "blur(12px)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            cursor: "zoom-out",
+                            animation: `${lightboxClosing ? "lbBackdropOut" : "lbBackdropIn"} 0.2s ease both`,
+                        }}
+                        onClick={closeLightbox}
+                    >
+                        <img
+                            src={photo.link}
+                            alt={instrument.name}
+                            style={{
+                                maxWidth: "90vw", maxHeight: "90vh", borderRadius: 12,
+                                objectFit: "contain", boxShadow: "0 0 60px rgba(0,0,0,0.6)",
+                                cursor: "default",
+                                animation: `${lightboxClosing ? "lbImageOut" : "lbImageIn"} 0.2s ease both`,
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        />
+                    </div>
+                </>,
+                document.body
             )}
-            {photo && (
-                <img src={photo.link} alt={instrument.name} style={{ width: "100%", borderRadius: 8, objectFit: "cover", maxHeight: 160 }} />
-            )}
-        </div>
+        </>
     );
 };
 

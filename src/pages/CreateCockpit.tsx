@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import * as THREE from "three";
 import api from "../api/axios";
 
@@ -17,6 +17,7 @@ interface Instrument {
     y: number;
     pitch: number;
     yaw: number;
+    photoFile?: File;
 }
 
 interface ChecklistItem {
@@ -342,6 +343,9 @@ const StepIndicator: React.FC<{ step: Step }> = ({ step }) => (
 
 const CreateCockpit: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const schoolId = searchParams.get("schoolId");
+    const schoolName = searchParams.get("schoolName");
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [step, setStep] = useState<Step>(1);
     const [submitting, setSubmitting] = useState(false);
@@ -441,11 +445,19 @@ const CreateCockpit: React.FC = () => {
                     const { data } = await api.post("/storage/upload/text", { text: inst.description });
                     textUrl = data.url;
                 }
+                const media: { link: string; type: string }[] = [];
+                if (textUrl) media.push({ link: textUrl, type: "TEXT" });
+                if (inst.photoFile) {
+                    const fd = new FormData();
+                    fd.append("file", inst.photoFile);
+                    const { data: photoData } = await api.post<{ originalUrl: string }>("/storage/upload/image", fd, { headers: { "Content-Type": "multipart/form-data" } });
+                    media.push({ link: photoData.originalUrl, type: "PHOTO" });
+                }
                 return {
                     name: inst.name,
                     xPos: inst.x,
                     yPos: inst.y,
-                    media: textUrl ? [{ link: textUrl, type: "TEXT" }] : [],
+                    media,
                 };
             }));
 
@@ -465,6 +477,7 @@ const CreateCockpit: React.FC = () => {
                 category: category || undefined,
                 purpose: purpose || undefined,
                 hasVfr, hasIfr, hasNight, hasAutopilot,
+                schoolId: schoolId || undefined,
                 media: [
                     { link: uploadData.originalUrl, type: "PANORAMA" },
                     { link: uploadData.previewUrl, type: "PREVIEW" },
@@ -571,6 +584,17 @@ const CreateCockpit: React.FC = () => {
                     {/* ── Step 1: Aircraft ── */}
                     {step === 1 && (
                         <div style={s.form}>
+                            {schoolName && (
+                                <div style={s.fieldGroup}>
+                                    <label style={s.label}>School</label>
+                                    <div style={{ ...sf.input, display: "flex", alignItems: "center", gap: 8, cursor: "default", color: "#E9FD97" }}>
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M17 14.5001V11.4945C17 11.315 17 11.2253 16.9727 11.146C16.9485 11.076 16.9091 11.0122 16.8572 10.9592C16.7986 10.8993 16.7183 10.8592 16.5578 10.779L12 8.50006M4 9.50006V16.3067C4 16.6786 4 16.8645 4.05802 17.0274C4.10931 17.1713 4.1929 17.3016 4.30238 17.4082C4.42622 17.5287 4.59527 17.6062 4.93335 17.7612L11.3334 20.6945C11.5786 20.8069 11.7012 20.8631 11.8289 20.8853C11.9421 20.9049 12.0579 20.9049 12.1711 20.8853C12.2988 20.8631 12.4214 20.8069 12.6666 20.6945L19.0666 17.7612C19.4047 17.6062 19.5738 17.5287 19.6976 17.4082C19.8071 17.3016 19.8907 17.1713 19.942 17.0274C20 16.8645 20 16.6786 20 16.3067V9.50006M2 8.50006L11.6422 3.67895C11.7734 3.61336 11.839 3.58056 11.9078 3.56766C11.9687 3.55622 12.0313 3.55622 12.0922 3.56766C12.161 3.58056 12.2266 3.61336 12.3578 3.67895L22 8.50006L12.3578 13.3212C12.2266 13.3868 12.161 13.4196 12.0922 13.4325C12.0313 13.4439 11.9687 13.4439 11.9078 13.4325C11.839 13.4196 11.7734 13.3868 11.6422 13.3212L2 8.50006Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                        <span style={{ color: "#fff" }}>{schoolName}</span>
+                                    </div>
+                                </div>
+                            )}
                             <div style={s.fieldGroup}>
                                 <label style={s.label}>Name</label>
                                 <input
@@ -687,7 +711,7 @@ const CreateCockpit: React.FC = () => {
                                             </button>
                                             <button style={s.instRemoveBtn} onClick={() => handleRemoveInstrument(inst.localId)}>
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#C00F0C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#C00F0C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                 </svg>
                                             </button>
                                         </div>
@@ -695,9 +719,37 @@ const CreateCockpit: React.FC = () => {
                                             style={sf.textarea}
                                             value={inst.description}
                                             placeholder="Description"
-                                            rows={2}
+                                            rows={5}
                                             onChange={e => setInstruments(prev => prev.map(i => i.localId === inst.localId ? { ...i, description: e.target.value } : i))}
                                         />
+                                        <div style={s.photoRow}>
+                                            {inst.photoFile && (
+                                                <div style={s.photoPreviewWrap}>
+                                                    <img src={URL.createObjectURL(inst.photoFile)} style={s.photoPreview} alt="" />
+                                                    <button style={s.photoRemoveBtn} onClick={() => setInstruments(prev => prev.map(i => i.localId === inst.localId ? { ...i, photoFile: undefined } : i))}>
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M18 6L6 18M6 6L18 18" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <label style={s.photoUploadBtn}>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                                                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15M17 8L12 3M12 3L7 8M12 3V15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                                {inst.photoFile ? "Replace photo" : "Upload photo"}
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    style={{ display: "none" }}
+                                                    onChange={e => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+                                                        setInstruments(prev => prev.map(i => i.localId === inst.localId ? { ...i, photoFile: file } : i));
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -744,7 +796,7 @@ const CreateCockpit: React.FC = () => {
                                         />
                                         <button style={s.instRemoveBtn} onClick={() => setChecklists(prev => prev.filter(c => c.localId !== cl.localId))}>
                                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#C00F0C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#C00F0C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                         </button>
                                     </div>
@@ -789,7 +841,7 @@ const CreateCockpit: React.FC = () => {
                                                                 ...c, items: c.items.filter(it => it.localId !== item.localId)
                                                             } : c))}>
                                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                                    <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#313C01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                    <path d="M9 3H15M3 6H21M19 6L18.2987 16.5193C18.1935 18.0975 18.1409 18.8867 17.8 19.485C17.4999 20.0118 17.0472 20.4353 16.5017 20.6997C15.882 21 15.0911 21 13.5093 21H10.4907C8.90891 21 8.11803 21 7.49834 20.6997C6.95276 20.4353 6.50009 20.0118 6.19998 19.485C5.85911 18.8867 5.8065 18.0975 5.70129 16.5193L5 6M10 10.5V15.5M14 10.5V15.5" stroke="#313C01" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                                 </svg>
                                                             </button>
                                                         </div>
@@ -1180,6 +1232,53 @@ const s: Record<string, React.CSSProperties> = {
     instrumentCardHeader: {
         display: "flex",
         justifyContent: "flex-end",
+    },
+    photoRow: {
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        flexWrap: "wrap" as const,
+    },
+    photoPreviewWrap: {
+        position: "relative" as const,
+        width: 80,
+        height: 60,
+        borderRadius: 8,
+        overflow: "hidden",
+        flexShrink: 0,
+    },
+    photoPreview: {
+        width: "100%",
+        height: "100%",
+        objectFit: "cover" as const,
+    },
+    photoRemoveBtn: {
+        position: "absolute" as const,
+        top: 4,
+        right: 4,
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        background: "rgba(0,0,0,0.6)",
+        border: "none",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 0,
+    },
+    photoUploadBtn: {
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        borderRadius: 8,
+        border: "1px solid rgba(255,255,255,0.2)",
+        background: "rgba(255,255,255,0.05)",
+        color: "rgba(255,255,255,0.7)",
+        fontSize: 14,
+        padding: "8px 12px",
+        cursor: "pointer",
+        whiteSpace: "nowrap" as const,
     },
     instrumentNum: {
         fontSize: 11,

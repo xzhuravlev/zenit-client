@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Welcome from "./pages/Welcome";
 import AuthPage from "./pages/AuthPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import Schools from "./pages/Schools";
@@ -28,6 +29,7 @@ export default function App() {
         <Route path="/cockpits/:cockpitId/checklist/:checklistId" element={<ChecklistCockpit />} />
         <Route path="/schools/create" element={<CreateSchoolPage />} />
 
+        <Route path="/" element={<Welcome />} />
         <Route path="*" element={<AuthPage />} />
       </Routes>
     </BrowserRouter>

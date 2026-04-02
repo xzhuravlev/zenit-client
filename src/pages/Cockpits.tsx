@@ -5,7 +5,8 @@ import api from "../api/axios";
 
 const COLS = 3;
 const ROWS = 5;
-const PAGE_SIZE = COLS * ROWS;
+const GRID_SIZE = COLS * ROWS;
+const PAGE_SIZE = GRID_SIZE - 1; // last slot reserved for Create card
 
 // ─── Types ───���────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface CockpitDetail extends Cockpit {
         progresses: { percent: number; attempt: number }[];
     }[];
     creator: { id: string; name: string | null; surname: string | null; avatar: string | null } | null;
+    school: { id: string; name: string } | null;
 }
 
 // ─── Modal Photo Section ──────────────────────────────────────────────────────
@@ -388,11 +390,9 @@ const Cockpits: React.FC = () => {
         setPage(0);
     };
 
-    // На первой странице заполняем недостающие слоты dummy-карточками
+    // Fill with dummy slots up to PAGE_SIZE, then append Create card
     const slots: Array<Cockpit | null> = [...cockpits];
-    if (page === 0) {
-        while (slots.length < PAGE_SIZE) slots.push(null);
-    }
+    while (slots.length < PAGE_SIZE) slots.push(null);
 
     return (
         <div style={s.container}>
@@ -457,6 +457,12 @@ const Cockpits: React.FC = () => {
                     {slots.map((cockpit, i) => (
                         <CockpitCard key={cockpit?.id ?? `dummy-${i}`} cockpit={cockpit ?? undefined} onOpen={setSelected} />
                     ))}
+                    <div style={s.createCard} onClick={() => navigate("/cockpits/create")}>
+                        <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" style={s.createIcon}>
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        <span style={s.createLabel}>Create your own cockpit</span>
+                    </div>
                 </div>
                 <div style={s.pagination}>
                     <button style={s.pageBtn} onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
@@ -504,16 +510,29 @@ const Cockpits: React.FC = () => {
                                     <div style={s.modalSection}>
                                         <span style={s.modalSectionTitle}>Description</span>
                                         <span style={s.modalSectionText}>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Lorem ipsum dolor sit amet, consectetur adipiscing elit.</span>
-                                        {detail?.creator && (
-                                            <div style={s.modalAuthor}>
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#E9FD97", flexShrink: 0 }}>
-                                                    <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56004 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21M16.5 7.5C16.5 9.98528 14.4853 12 12 12C9.51472 12 7.5 9.98528 7.5 7.5C7.5 5.01472 9.51472 3 12 3C14.4853 3 16.5 5.01472 16.5 7.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                                </svg>
-                                                <span style={s.modalAuthorName}>
-                                                    {[detail.creator.name].filter(Boolean).join(" ") || "Unknown"}
-                                                </span>
-                                            </div>
-                                        )}
+                                        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8 }}>
+                                            {detail?.school && (
+                                                <div style={s.modalAuthor}>
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#E9FD97", flexShrink: 0 }}>
+                                                        <path d="M17 14.5001V11.4945C17 11.315 17 11.2253 16.9727 11.146C16.9485 11.076 16.9091 11.0122 16.8572 10.9592C16.7986 10.8993 16.7183 10.8592 16.5578 10.779L12 8.50006M4 9.50006V16.3067C4 16.6786 4 16.8645 4.05802 17.0274C4.10931 17.1713 4.1929 17.3016 4.30238 17.4082C4.42622 17.5287 4.59527 17.6062 4.93335 17.7612L11.3334 20.6945C11.5786 20.8069 11.7012 20.8631 11.8289 20.8853C11.9421 20.9049 12.0579 20.9049 12.1711 20.8853C12.2988 20.8631 12.4214 20.8069 12.6666 20.6945L19.0666 17.7612C19.4047 17.6062 19.5738 17.5287 19.6976 17.4082C19.8071 17.3016 19.8907 17.1713 19.942 17.0274C20 16.8645 20 16.6786 20 16.3067V9.50006M2 8.50006L11.6422 3.67895C11.7734 3.61336 11.839 3.58056 11.9078 3.56766C11.9687 3.55622 12.0313 3.55622 12.0922 3.56766C12.161 3.58056 12.2266 3.61336 12.3578 3.67895L22 8.50006L12.3578 13.3212C12.2266 13.3868 12.161 13.4196 12.0922 13.4325C12.0313 13.4439 11.9687 13.4439 11.9078 13.4325C11.839 13.4196 11.7734 13.3868 11.6422 13.3212L2 8.50006Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    </svg>
+                                                    <span style={s.modalAuthorName}>{detail.school.name}</span>
+                                                </div>
+                                            )}
+                                            {detail?.school && detail?.creator && (
+                                                <div style={{ width: 1, height: 24, background: "rgba(255,255,255,0.25)", flexShrink: 0 }} />
+                                            )}
+                                            {detail?.creator && (
+                                                <div style={s.modalAuthor}>
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "#E9FD97", flexShrink: 0 }}>
+                                                        <path d="M20 21C20 19.6044 20 18.9067 19.8278 18.3389C19.44 17.0605 18.4395 16.06 17.1611 15.6722C16.5933 15.5 15.8956 15.5 14.5 15.5H9.5C8.10444 15.5 7.40665 15.5 6.83886 15.6722C5.56045 16.06 4.56004 17.0605 4.17224 18.3389C4 18.9067 4 19.6044 4 21M16.5 7.5C16.5 9.98528 14.4853 12 12 12C9.51472 12 7.5 9.98528 7.5 7.5C7.5 5.01472 9.51472 3 12 3C14.4853 3 16.5 5.01472 16.5 7.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    </svg>
+                                                    <span style={s.modalAuthorName}>
+                                                        {[detail.creator.name].filter(Boolean).join(" ") || "Unknown"}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                     <div style={s.modalSection}>
                                         <span style={s.modalSectionTitle}>Checklists</span>
@@ -658,6 +677,32 @@ const s: Record<string, React.CSSProperties> = {
         gridTemplateRows: `repeat(${ROWS}, 1fr)`,
         gap: 32,
     },
+    createCard: {
+        background: "rgba(233,253,151,0.08)",
+        border: "1px solid rgba(233, 253, 151, 0.4)",
+        borderRadius: 16,
+        height: 256,
+        padding: 16,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 12,
+        cursor: "pointer",
+        color: "rgba(233, 253, 151, 0.4)",
+        transition: "border-color 0.2s, color 0.2s",
+        boxShadow: "0px 0px 40px rgba(233, 253, 151, 0.2) inset"
+    },
+    createIcon: {
+        width: 40,
+        height: 40,
+        flexShrink: 0,
+    },
+    createLabel: {
+        fontSize: 18,
+        fontWeight: 400,
+        textAlign: "center" as const,
+    },
     card: {
         background: "rgba(255,255,255,0.07)",
         border: "1px solid #393A36",
@@ -707,12 +752,12 @@ const s: Record<string, React.CSSProperties> = {
         fontWeight: 400,
     },
     cardDivider: {
-        width: 2,
+        width: 1,
         height: 25,
-        background: "rgba(255,255,255,0.4)",
+        background: "rgba(255,255,255,0.25)",
     },
     cardManufacturer: {
-        color: "rgb(255,255,255)",
+        color: "rgba(255,255,255,0.7)",
         fontWeight: 400,
         fontSize: 20,
     },
@@ -840,8 +885,8 @@ const s: Record<string, React.CSSProperties> = {
     },
     modalAuthorName: {
         color: "rgba(255,255,255,0.7)",
-        fontSize: 14,
-        fontWeight: 500,
+        fontSize: 16,
+        fontWeight: 400,
     },
     checklistList: {
         display: "flex",
@@ -870,8 +915,8 @@ const s: Record<string, React.CSSProperties> = {
     },
     checklistDivider: {
         width: 1,
-        height: 18,
-        background: "rgba(255,255,255,0.4)",
+        height: 25,
+        background: "rgba(255,255,255,0.25)",
         flexShrink: 0,
     },
     checklistPct: {

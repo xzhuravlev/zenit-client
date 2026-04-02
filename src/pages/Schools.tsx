@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import api from "../api/axios";
 
 const COLS = 3;
@@ -18,6 +18,7 @@ interface School {
     id: string;
     name: string;
     description: string | null;
+    address: string | null;
     createdAt: string;
     media: SchoolMedia[];
     _count: { members: number; cockpits: number };
@@ -51,6 +52,18 @@ interface SchoolDetail extends School {
     instagram: string | null;
     members: SchoolMember[];
     currentUserRole: "OWNER" | "INSTRUCTOR" | "STUDENT" | null;
+}
+
+interface SchoolCockpit {
+    id: string;
+    name: string;
+    manufacturer: string | null;
+    hasVfr: boolean;
+    hasIfr: boolean;
+    hasNight: boolean;
+    hasAutopilot: boolean;
+    createdAt: string;
+    media: { link: string; type: string }[];
 }
 
 // ─── Modal Photo Section ──────────────────────────────────────────────────────
@@ -189,21 +202,12 @@ const ms: Record<string, React.CSSProperties> = {
     },
 };
 
-// ─── Card ───────────────────��─────────────────────────────────────────────────
+// ─── Card ─────��─────────────��─────────────────────────────────────────────────
 
 interface CardProps {
     school?: School;
     onOpen?: (school: School) => void;
 }
-
-const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const days = Math.floor(diff / 86400000);
-    if (days < 1) return "today";
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    return "more than a month ago";
-};
 
 const ROLE_LABEL: Record<string, string> = {
     OWNER: "Owner",
@@ -230,26 +234,14 @@ const SchoolCard: React.FC<CardProps> = ({ school, onOpen }) => {
                     <div style={s.cardTop} />
                     <div style={s.cardBottom}>
                         <div style={s.cardInfo}>
-                            <span style={s.cardName}>{school.name}</span>
-                            <div style={s.cardTags}>
-                                <span style={s.cardTag}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: 4, flexShrink: 0 }}>
-                                        <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88M13 7C13 9.20914 11.2091 11 9 11C6.79086 11 5 9.20914 5 7C5 4.79086 6.79086 3 9 3C11.2091 3 13 4.79086 13 7Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    {school._count.members}
-                                </span>
-                                <span style={s.cardTag}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ marginRight: 4, flexShrink: 0 }}>
-                                        <path d="M12 2L2 7L12 12L22 7L12 2ZM2 17L12 22L22 17M2 12L12 17L22 12" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    {school._count.cockpits}
-                                </span>
-                            </div>
-                            <div style={s.cardTime}>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                                    <path d="M12 6V12L16 14M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#E9FD97" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                                <span>{timeAgo(school.createdAt)}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                <span style={s.cardName}>{school.name}</span>
+                                {school.address && (
+                                    <>
+                                        <div style={s.cardDivider} />
+                                        <span style={s.cardAddress}>{school.address}</span>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -259,9 +251,23 @@ const SchoolCard: React.FC<CardProps> = ({ school, onOpen }) => {
     );
 };
 
+// ─── Animated Number ──────────────────────────────────────────────────────────
+
+const AnimatedNumber: React.FC<{ value: number }> = ({ value }) => (
+    <span style={{ display: "inline-block", overflow: "hidden", verticalAlign: "bottom" }}>
+        <span
+            key={value}
+            style={{ display: "inline-block", animation: "numIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)" }}
+        >
+            {value}
+        </span>
+    </span>
+);
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 const Schools: React.FC = () => {
+    const navigate = useNavigate();
     const { setTitle } = useOutletContext<{ setTitle: (t: string) => void }>();
     const [page, setPage] = useState(0);
     const [search, setSearch] = useState("");
@@ -272,6 +278,7 @@ const Schools: React.FC = () => {
     const [myOffset, setMyOffset] = useState(0);
     const [selected, setSelected] = useState<School | null>(null);
     const [detail, setDetail] = useState<SchoolDetail | null>(null);
+    const [schoolCockpits, setSchoolCockpits] = useState<SchoolCockpit[]>([]);
     const [joining, setJoining] = useState(false);
 
     useEffect(() => {
@@ -280,15 +287,18 @@ const Schools: React.FC = () => {
 
     useEffect(() => {
         api.get<SchoolsResponse>(`/schools?page=1&limit=200`)
-            .then(r => setMySchools(r.data.items.filter(s => s.currentUserRole !== null)))
+            .then(r => {console.log("ALL SCHOOLS:\n", r.data); setMySchools(r.data.items.filter(s => s.currentUserRole !== null))})
             .catch(() => {});
     }, []);
 
     useEffect(() => {
-        if (!selected) { setDetail(null); return; }
+        if (!selected) { setDetail(null); setSchoolCockpits([]); return; }
         api.get<SchoolDetail>(`/schools/${selected.id}`)
             .then(r => setDetail(r.data))
             .catch(() => setDetail(null));
+        api.get<{ items: SchoolCockpit[] }>(`/cockpits?schoolId=${selected.id}&limit=50`)
+            .then(r => setSchoolCockpits(r.data.items))
+            .catch(() => setSchoolCockpits([]));
     }, [selected]);
 
     useEffect(() => {
@@ -414,6 +424,7 @@ const Schools: React.FC = () => {
                                 </button>
                             </div>
 
+                            <div style={s.modalScroll}>
                             <div style={s.modalBody}>
                                 <div style={s.modalPhotos}>
                                     <ModalPhotoSection media={detail?.media ?? []} />
@@ -429,15 +440,35 @@ const Schools: React.FC = () => {
                                     )}
 
                                     {/* Stats */}
+                                    <style>{`@keyframes numIn { from { transform: translateY(14px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }`}</style>
                                     <div style={s.statsRow}>
-                                        <div style={s.statItem}>
-                                            <span style={s.statValue}>{detail?._count.members ?? selected._count.members}</span>
-                                            <span style={s.statLabel}>members</span>
+                                        <div
+                                            style={{ ...s.statItem, cursor: detail?.currentUserRole !== "OWNER" ? "pointer" : "default" }}
+                                            onClick={detail?.currentUserRole === null ? handleJoin : detail?.currentUserRole !== "OWNER" ? handleLeave : undefined}
+                                        >
+                                            <span style={s.statValue}><AnimatedNumber value={detail?._count.members ?? selected._count.members} /></span>
+                                            <span style={{
+                                                ...s.statLabel,
+                                                color: !detail ? "rgba(255,255,255,0.5)" : detail.currentUserRole === null ? "#E9FD97" : detail.currentUserRole === "OWNER" ? "rgba(255,255,255,0.5)" : "#C00F0C",
+                                            }}>
+                                                {!detail || detail.currentUserRole === "OWNER" ? "members" : detail.currentUserRole === null ? "join" : "leave"}
+                                            </span>
                                         </div>
                                         <div style={s.statDivider} />
-                                        <div style={s.statItem}>
-                                            <span style={s.statValue}>{detail?._count.cockpits ?? selected._count.cockpits}</span>
-                                            <span style={s.statLabel}>cockpits</span>
+                                        <div
+                                            style={{
+                                                ...s.statItem,
+                                                cursor: detail?.currentUserRole === "OWNER" || detail?.currentUserRole === "INSTRUCTOR" ? "pointer" : "default",
+                                            }}
+                                            onClick={detail?.currentUserRole === "OWNER" || detail?.currentUserRole === "INSTRUCTOR" ? () => navigate(`/cockpits/create?schoolId=${detail.id}&schoolName=${encodeURIComponent(detail.name)}`) : undefined}
+                                        >
+                                            <span style={s.statValue}><AnimatedNumber value={detail?._count.cockpits ?? selected._count.cockpits} /></span>
+                                            <span style={{
+                                                ...s.statLabel,
+                                                color: detail?.currentUserRole === "OWNER" || detail?.currentUserRole === "INSTRUCTOR" ? "#E9FD97" : "rgba(255,255,255,0.5)",
+                                            }}>
+                                                {detail?.currentUserRole === "OWNER" || detail?.currentUserRole === "INSTRUCTOR" ? "add cockpit" : "cockpits"}
+                                            </span>
                                         </div>
                                     </div>
 
@@ -486,11 +517,11 @@ const Schools: React.FC = () => {
                                     )}
 
                                     {/* Members */}
-                                    {detail && detail.members.length > 0 && (
+                                    {detail && detail.members.filter(m => m.role === "OWNER" || m.role === "INSTRUCTOR").length > 0 && (
                                         <div style={s.modalSection}>
-                                            <span style={s.modalSectionTitle}>Members</span>
+                                            <span style={s.modalSectionTitle}>Team</span>
                                             <div style={s.memberList}>
-                                                {detail.members.map(m => (
+                                                {detail.members.filter(m => m.role === "OWNER" || m.role === "INSTRUCTOR").map(m => (
                                                     <div key={m.id} style={s.memberRow}>
                                                         <div style={s.memberAvatar}>
                                                             {m.user.avatar
@@ -536,6 +567,43 @@ const Schools: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Cockpits grid */}
+                            {schoolCockpits.length > 0 && (
+                                <div style={s.modalCockpits}>
+                                    <span style={s.modalSectionTitle}>School Cockpits</span>
+                                    <div style={s.cockpitsGrid}>
+                                        {schoolCockpits.map(c => {
+                                            const photo = c.media.find(m => m.type === "PREVIEW")?.link ?? c.media.find(m => m.type === "preview")?.link ?? c.media[0]?.link;
+                                            const tags = [c.hasVfr && "VFR", c.hasIfr && "IFR", c.hasNight && "Night", c.hasAutopilot && "AP"].filter(Boolean) as string[];
+                                            return (
+                                                <div key={c.id} style={{
+                                                    ...s.cockpitCard,
+                                                    background: photo
+                                                        ? `linear-gradient(180deg, #1F201E 0%, rgba(31,32,30,0) 32%, rgba(31,32,30,0.5) 57%, #1F201E 100%), url(${photo}) center / cover no-repeat`
+                                                        : s.cockpitCard.background,
+                                                }}>
+                                                    <div style={s.cockpitCardBottom}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                            <span style={s.cockpitCardName}>{c.name}</span>
+                                                            {c.manufacturer && <>
+                                                                <div style={s.cockpitCardDivider} />
+                                                                <span style={s.cockpitCardMfr}>{c.manufacturer}</span>
+                                                            </>}
+                                                        </div>
+                                                        {tags.length > 0 && (
+                                                            <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                                                                {tags.map(t => <span key={t} style={s.cockpitTag}>{t}</span>)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                            </div>{/* modalScroll */}
                         </div>
                     </div>
                 </>,
@@ -629,6 +697,16 @@ const s: Record<string, React.CSSProperties> = {
         fontSize: 20,
         fontWeight: 400,
     },
+    cardDivider: {
+        width: 1,
+        height: 25,
+        background: "rgba(255,255,255,0.7)",
+    },
+    cardAddress: {
+        color: "rgba(255,255,255,0.7)",
+        fontWeight: 400,
+        fontSize: 20,
+    },
     cardTags: {
         display: "flex",
         gap: 8,
@@ -690,7 +768,7 @@ const s: Record<string, React.CSSProperties> = {
     },
     modal: {
         width: "70%",
-        height: "70%",
+        height: "85vh",
         border: "1px solid transparent",
         background: "linear-gradient(rgb(18,18,17), rgb(18,18,17)) padding-box, linear-gradient(to bottom, #393A36, #1F201E) border-box",
         borderRadius: 16,
@@ -698,11 +776,15 @@ const s: Record<string, React.CSSProperties> = {
         padding: 32,
         display: "flex",
         flexDirection: "column",
+        boxSizing: "border-box" as const,
     },
     modalHeader: {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        position: "sticky" as const,
+        top: 0,
+        zIndex: 1,
     },
     modalTitle: {
         color: "rgba(255, 255, 255, 1)",
@@ -722,12 +804,19 @@ const s: Record<string, React.CSSProperties> = {
         flexShrink: 0,
         padding: 8,
     },
+    modalScroll: {
+        flex: 1,
+        overflowY: "auto" as const,
+        maskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 92%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 4%, black 92%, transparent 100%)",
+        paddingBottom: 32,
+    },
     modalBody: {
         display: "flex",
-        flex: 1,
+        flexShrink: 0,
+        height: "calc(85vh - 130px)",
         gap: 32,
         marginTop: 24,
-        minHeight: 0,
     },
     modalPhotos: {
         flex: "0 0 45%",
@@ -739,6 +828,59 @@ const s: Record<string, React.CSSProperties> = {
         flexDirection: "column",
         gap: 20,
         overflowY: "auto",
+        minHeight: 0,
+    },
+    modalCockpits: {
+        marginTop: 40,
+        display: "flex",
+        flexDirection: "column",
+        gap: 20,
+        flexShrink: 0,
+    },
+    cockpitsGrid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 16,
+    },
+    cockpitCard: {
+        borderRadius: 16,
+        height: 200,
+        background: "rgba(255,255,255,0.05)",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "flex-end",
+        padding: "16px",
+        boxSizing: "border-box" as const,
+        cursor: "pointer",
+    },
+    cockpitCardBottom: {
+        display: "flex",
+        flexDirection: "column",
+    },
+    cockpitCardName: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: 400,
+    },
+    cockpitCardMfr: {
+        color: "rgba(255,255,255,0.7)",
+        fontSize: 16,
+        fontWeight: 400,
+    },
+    cockpitCardDivider: {
+        width: 1,
+        height: 16,
+        background: "rgba(255,255,255,0.7)",
+        flexShrink: 0,
+    },
+    cockpitTag: {
+        borderRadius: 4,
+        background: "rgba(70, 71, 67, 0.8)",
+        backdropFilter: "blur(2px)",
+        padding: "2px 4px",
+        color: "rgb(255,255,255)",
+        fontSize: 12,
+        fontWeight: 600,
     },
     modalSection: {
         display: "flex",
@@ -778,12 +920,13 @@ const s: Record<string, React.CSSProperties> = {
     statsRow: {
         display: "flex",
         alignItems: "center",
-        gap: 24,
         borderRadius: 12,
-        border: "1px solid #393A36",
-        padding: "14px 24px",
+        background: "linear-gradient(rgb(18,18,17), rgb(18,18,17)) padding-box, linear-gradient(to bottom, #393A36, #1F201E) border-box",
+        border: "1px solid transparent",
+        padding: "14px 0",
     },
     statItem: {
+        flex: 1,
         display: "flex",
         flexDirection: "column",
         gap: 2,
@@ -800,7 +943,7 @@ const s: Record<string, React.CSSProperties> = {
     },
     statDivider: {
         width: 1,
-        height: 36,
+        height: 52,
         background: "rgba(255,255,255,0.15)",
     },
     memberList: {

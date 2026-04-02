@@ -22,6 +22,10 @@ const ContentLayout: React.FC = () => {
     const [title, setTitle] = useState("");
 
     useEffect(() => {
+        if (title) document.title = `ZENIT | ${title}`;
+    }, [title]);
+
+    useEffect(() => {
         const unsub = onAuthStateChanged(auth, (user) => {
             if (user) setAuthReady(true);
             else window.location.href = "/auth";

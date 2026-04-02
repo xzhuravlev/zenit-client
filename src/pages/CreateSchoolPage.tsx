@@ -79,7 +79,7 @@ const CreateSchoolPage: React.FC = () => {
 
     try {
       // 1. Create school
-      const { data: school } = await api.post<{ id: string }>("/school", {
+      const { data: school } = await api.post<{ id: string }>("/schools", {
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         address: form.address.trim() || undefined,
@@ -97,7 +97,7 @@ const CreateSchoolPage: React.FC = () => {
           headers: { "Content-Type": "multipart/form-data" },
         });
         // Save media link to school (POST /school/:id/media)
-        await api.post(`/school/${school.id}/media`, {
+        await api.post(`/schools/${school.id}/media`, {
           link: uploadData.url,
           type: "PHOTO",
         });
